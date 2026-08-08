@@ -6,6 +6,7 @@
 import { CONFIG } from './config.js';
 import { obterImovel, moeda, precoRotulo, area, TIPOS, linkWhatsApp } from './dados.js';
 import { escapar, aviso, ligarFaixaDeExemplo, lerLinkDeVideo } from './ui.js';
+import { ligarChat } from './chat.js';
 
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 const $$ = (sel, raiz = document) => [...raiz.querySelectorAll(sel)];
@@ -261,6 +262,7 @@ function montarMapa(imovel) {
 
 async function iniciar() {
   ligarFaixaDeExemplo();
+  ligarChat();
 
   $('#rodape-creci').textContent = CONFIG.contato.creci;
   $('#ano').textContent = new Date().getFullYear();

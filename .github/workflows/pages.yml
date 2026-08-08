@@ -1,0 +1,50 @@
+# =============================================================================
+# Publica o site no GitHub Pages a cada push na main.
+#
+# O `enablement: true` do configure-pages LIGA o Pages sozinho na primeira
+# execução, usando a permissão `pages: write` do GITHUB_TOKEN. É por isso que
+# não é preciso entrar em Settings > Pages e clicar em nada: o próprio push
+# publica.
+#
+# O site não tem build — é HTML, CSS e JS puros — então o artefato é a raiz do
+# repositório do jeito que ela está. O arquivo .nojekyll na raiz impede o Pages
+# de passar o Jekyll por cima e engolir arquivos começados com underline.
+# =============================================================================
+
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permite republicar na mão, pela aba Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Deixa terminar a publicação em andamento antes de começar outra, em vez de
+# cancelar no meio: cancelar um deploy do Pages pode deixar o site fora do ar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacao.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: publicacao
+        uses: actions/deploy-pages@v4

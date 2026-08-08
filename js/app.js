@@ -11,6 +11,7 @@ import {
   cardImovel, esqueletos, aviso, lerNumero, mascararMoeda, ligarFaixaDeExemplo,
 } from './ui.js';
 import { iniciarMovimento, revelarNovos, revelarBairros, recalcular } from './motion.js';
+import { ligarChat } from './chat.js';
 
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 const $$ = (sel, raiz = document) => [...raiz.querySelectorAll(sel)];
@@ -324,6 +325,7 @@ function iniciar() {
   carregarCatalogo({ reiniciar: true });
 
   iniciarMovimento();
+  ligarChat();
 }
 
 if (document.readyState === 'loading') {

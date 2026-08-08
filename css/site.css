@@ -898,14 +898,23 @@ html:not(.motion-ok) .percurso__progresso { transform: scaleY(1); }
 
 /* ------------------------------------------------ botão flutuante zap ---- */
 
+/* Os dois botões flutuantes dividem a mesma coluna no canto: WhatsApp embaixo
+   (falar com gente) e o chat de IA logo acima (tirar dúvida na hora). As
+   medidas saem daqui pra que empilhar continue certo se um deles mudar. */
+:root {
+  --flutuante-lado: clamp(1rem, 3vw, 2rem);
+  --flutuante-tamanho: 3.5rem;
+  --flutuante-vao: 0.7rem;
+}
+
 .zap {
   position: fixed;
-  right: clamp(1rem, 3vw, 2rem);
-  bottom: clamp(1rem, 3vw, 2rem);
+  right: var(--flutuante-lado);
+  bottom: var(--flutuante-lado);
   z-index: var(--z-flutuante);
   display: grid;
   place-items: center;
-  width: 3.5rem; height: 3.5rem;
+  width: var(--flutuante-tamanho); height: var(--flutuante-tamanho);
   border-radius: 50%;
   background: var(--vermelho);
   color: var(--sobre-vermelho);
@@ -914,6 +923,125 @@ html:not(.motion-ok) .percurso__progresso { transform: scaleY(1); }
 }
 .zap:hover { transform: scale(1.06); background: var(--vermelho-escuro); }
 .zap .ico { width: 1.6rem; height: 1.6rem; }
+
+/* ------------------------------------------------- chat de atendimento ---- */
+
+.chat-btn {
+  position: fixed;
+  right: var(--flutuante-lado);
+  /* Empilhado acima do WhatsApp, nunca por cima dele. */
+  bottom: calc(var(--flutuante-lado) + var(--flutuante-tamanho) + var(--flutuante-vao));
+  z-index: var(--z-flutuante);
+  display: grid;
+  place-items: center;
+  width: var(--flutuante-tamanho); height: var(--flutuante-tamanho);
+  padding: 0;
+  border: 1px solid var(--dourado-fio);
+  border-radius: 50%;
+  /* Fundo claro pra não virar um par de bolas vinho idênticas com o botão do
+     WhatsApp: são ações diferentes e precisam parecer diferentes. */
+  background: var(--bg-alto);
+  color: var(--vermelho);
+  font-size: 1.5rem;
+  box-shadow: var(--sombra-alta);
+  cursor: pointer;
+  transition: transform var(--rapido), background var(--rapido), color var(--rapido);
+}
+.chat-btn:hover {
+  transform: scale(1.06);
+  background: var(--vermelho);
+  color: var(--sobre-vermelho);
+}
+
+.chat-balao {
+  position: fixed;
+  right: calc(var(--flutuante-lado) + var(--flutuante-tamanho) + var(--flutuante-vao));
+  bottom: calc(var(--flutuante-lado) + var(--flutuante-tamanho) + var(--flutuante-vao) + 0.75rem);
+  z-index: var(--z-flutuante);
+  max-width: 15rem;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-btn);
+  background: var(--bg-alto);
+  box-shadow: var(--sombra);
+  font-size: 0.88rem;
+  color: var(--tinta-media);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity var(--medio), transform var(--medio);
+}
+.chat-balao.mostra { opacity: 1; transform: none; }
+
+.chat-painel {
+  position: fixed;
+  right: var(--flutuante-lado);
+  bottom: calc(var(--flutuante-lado) + var(--flutuante-tamanho) * 2 + var(--flutuante-vao) * 2);
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  width: min(23rem, calc(100vw - var(--flutuante-lado) * 2));
+  height: min(34rem, calc(100dvh - 12rem));
+  overflow: hidden;
+  border: 1px solid var(--dourado-fio);
+  border-radius: var(--r-card);
+  background: var(--bg-alto);
+  box-shadow: var(--sombra-alta);
+}
+.chat-painel__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.7rem 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--linha);
+  background: var(--vermelho);
+  color: var(--sobre-vermelho);
+}
+.chat-painel__titulo { font-weight: 500; font-size: 0.94rem; }
+.chat-painel__x {
+  display: grid;
+  place-items: center;
+  width: 2.2rem; height: 2.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.chat-painel__x:hover { background: rgba(255, 255, 255, 0.16); }
+
+/* Fica ATRÁS do iframe: quando o Streamlit termina de pintar, ele some sem
+   precisar de JS nenhum ouvindo o load. */
+.chat-painel__espera {
+  position: absolute;
+  inset: 3.6rem 1.5rem auto;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--tinta-fraca);
+}
+.chat-painel iframe {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--bg-alto);
+}
+
+@media (max-width: 480px) {
+  /* No celular a caixinha vira quase tela cheia: 23rem num aparelho de 390px
+     deixaria a conversa numa coluna estreita demais pra ler. */
+  .chat-painel {
+    right: 0.6rem; left: 0.6rem;
+    width: auto;
+    height: min(76dvh, calc(100dvh - 9rem));
+  }
+  .chat-balao { display: none; }
+}
 
 /* ---------------------------------------------------- faixa de demo ---- */
 
