@@ -1,0 +1,281 @@
+/* ==========================================================================
+   Página de detalhe do imóvel. Carregue depois de site.css.
+   ========================================================================== */
+
+.pagina-imovel { padding-block: calc(7rem + var(--altura-faixa, 0px)) 4rem; }
+
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  /* É a navegação principal desta página no celular; 24px de texto não é
+     alvo de dedo. O recuo compensa o padding pra alinhar com o conteúdo. */
+  min-height: 44px;
+  margin-left: -0.6rem;
+  padding-inline: 0.6rem;
+  margin-bottom: 1.1rem;
+  font-size: 0.92rem;
+  color: var(--tinta-media);
+  transition: color var(--rapido);
+}
+.voltar:hover { color: var(--vermelho); }
+
+/* ------------------------------------------------------------- galeria ---- */
+
+.galeria { display: grid; gap: 0.75rem; }
+
+.galeria__principal {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--bg-fundo);
+  border-radius: var(--r-card);
+}
+.galeria__principal img { width: 100%; height: 100%; object-fit: cover; }
+
+.galeria__miniaturas {
+  display: grid;
+  grid-auto-flow: column;
+  /* Teto fixo, não 1fr. Com 1fr, um imóvel com duas fotos dava duas
+     miniaturas de meia tela cada — maiores que a foto principal. O piso de
+     5.5rem é o que mantém a tira rolável quando há doze. */
+  grid-auto-columns: minmax(5.5rem, 8.5rem);
+  justify-content: start;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.35rem;
+}
+.miniatura {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--r-campo);
+  background: var(--bg-fundo);
+  padding: 0;
+  scroll-snap-align: start;
+  transition: border-color var(--rapido), opacity var(--rapido);
+  opacity: 0.72;
+}
+.miniatura img { width: 100%; height: 100%; object-fit: cover; }
+.miniatura:hover { opacity: 1; }
+.miniatura[aria-current='true'] { border-color: var(--vermelho); opacity: 1; }
+
+.galeria__contador {
+  position: absolute;
+  right: 0.9rem; bottom: 0.9rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--r-btn);
+  background: color-mix(in srgb, var(--bg-alto) 88%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 0.8rem;
+}
+
+/* -------------------------------------------------------------- corpo ---- */
+
+.imovel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: clamp(2rem, 4vw, 3.5rem);
+  align-items: start;
+  margin-top: 2.5rem;
+}
+
+.imovel__cabeca { display: grid; gap: 0.7rem; }
+.imovel__local { color: var(--tinta-fraca); font-size: 0.95rem; }
+.imovel__titulo { font-size: clamp(1.7rem, 3.2vw, 2.5rem); }
+
+.imovel__bloco { margin-top: 2.5rem; }
+.imovel__bloco h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+.imovel__descricao { color: var(--tinta-media); white-space: pre-line; }
+
+/* Ficha em grade em vez de tabela com fio embaixo de cada linha: mesma
+   informação, sem o visual de planilha. */
+/* Flex e não grid de propósito: com grid, cinco itens numa faixa de quatro
+   colunas deixam três buracos escancarados na última linha. No flex os itens
+   da última linha crescem e preenchem. */
+.dados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  background: var(--linha);
+  border: 1px solid var(--linha);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.dado {
+  flex: 1 1 8.5rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--bg-alto);
+}
+.dado dt { font-size: 0.8rem; color: var(--tinta-fraca); }
+.dado dd {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.comodidades { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+.comodidade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--linha-forte);
+  border-radius: var(--r-btn);
+  font-size: 0.9rem;
+}
+.comodidade .ico { color: var(--dourado-texto); font-size: 1rem; }
+
+/* --------------------------------------------------------------- mapa ---- */
+
+.mapa {
+  height: 22rem;
+  border-radius: var(--r-card);
+  border: 1px solid var(--linha);
+  overflow: hidden;
+  z-index: var(--z-mapa);
+}
+.mapa--sem-coordenada {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--tinta-fraca);
+  background: var(--bg-fundo);
+}
+.mapa-nota {
+  margin-top: 0.8rem;
+  font-size: 0.86rem;
+  color: var(--tinta-fraca);
+}
+
+/* O Leaflet aplica .leaflet-container no PRÓPRIO #mapa. Declarar height aqui
+   sobrescrevia o 22rem de cima (mesma especificidade, vem depois) e o mapa
+   colapsava pra zero. Só herança de fonte e o z-index dos controles. */
+.leaflet-container { font: inherit; background: var(--bg-fundo); }
+.leaflet-top, .leaflet-bottom { z-index: 400; }
+
+/* ------------------------------------------------------------- coluna ---- */
+
+.painel {
+  position: sticky;
+  top: 6rem;
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.6rem;
+  background: var(--bg-alto);
+  border: 1px solid var(--linha);
+  border-top: 2px solid var(--dourado);
+  border-radius: var(--r-card);
+  box-shadow: var(--sombra);
+}
+.painel__preco {
+  font-family: var(--fonte-display);
+  font-size: 2.1rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--vermelho);
+  line-height: 1.05;
+}
+.painel__preco .unidade { font-size: 0.5em; font-weight: 400; color: var(--tinta-fraca); }
+
+.painel__custos { display: grid; gap: 0.4rem; font-size: 0.9rem; color: var(--tinta-media); }
+.painel__custos div { display: flex; justify-content: space-between; gap: 1rem; }
+
+.painel__codigo {
+  padding-top: 1rem;
+  border-top: 1px solid var(--linha);
+  font-size: 0.85rem;
+  color: var(--tinta-fraca);
+}
+.painel .btn { width: 100%; }
+
+/* --------------------------------------------------------------- vídeo ---- */
+
+.videos { display: grid; gap: 1rem; }
+
+.video {
+  position: relative;
+  margin: 0;
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--bg-fundo);
+  border: 1px solid var(--linha);
+}
+.video video,
+.video iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  background: #000;
+}
+.video figcaption {
+  padding: 0.7rem 1rem;
+  font-size: 0.88rem;
+  color: var(--tinta-media);
+}
+
+/* Capa clicável do YouTube/Vimeo. O player só entra no clique: um iframe do
+   YouTube carregado junto com a página traz centenas de KB e rastreadores
+   que ninguém pediu, e a maioria das visitas nem chega a apertar o play. */
+.video__abrir {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 0;
+  background: var(--bg-fundo);
+  cursor: pointer;
+}
+.video__abrir img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.video__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  pointer-events: none;
+}
+.video__play i {
+  display: grid;
+  place-items: center;
+  width: 4.2rem; height: 4.2rem;
+  padding-left: 0.18em; /* o triângulo do play tem o peso à esquerda */
+  border-radius: 50%;
+  background: var(--vermelho);
+  color: var(--sobre-vermelho);
+  box-shadow: var(--sombra-alta);
+  transition: transform var(--rapido);
+}
+.video__abrir:hover .video__play i { transform: scale(1.08); }
+
+/* Vídeo que mora fora (Instagram, Drive): cartão honesto que leva pra lá,
+   e não um player falso que não vai tocar. */
+.video--fora {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.1rem 1.3rem;
+  color: var(--tinta);
+  text-decoration: none;
+  transition: border-color var(--rapido), background var(--rapido);
+}
+.video--fora:hover { border-color: var(--vermelho); background: var(--vermelho-fraco); }
+.video--fora i { font-size: 1.5rem; color: var(--vermelho); }
+
+@media (max-width: 980px) {
+  .imovel { grid-template-columns: 1fr; }
+  .painel { position: static; }
+}

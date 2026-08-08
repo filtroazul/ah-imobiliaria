@@ -1,0 +1,162 @@
+// ============================================================================
+// Peças de interface reaproveitadas pela home, pelo catálogo e pelo admin.
+// ============================================================================
+
+import { precoRotulo, area, TIPOS, MODO, modoAtual } from './dados.js';
+
+/** Escapa antes de jogar em innerHTML. O dado vem do admin, mas texto de
+ *  usuário nunca entra em HTML sem passar por aqui. */
+export function escapar(valor) {
+  return String(valor ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+const ROTULO_STATUS = { reservado: 'Reservado' };
+
+/**
+ * Cartão de imóvel.
+ * @param {object} imovel
+ * @param {{alto?: boolean, prioridade?: boolean}} opcoes
+ *        alto = ocupa a célula inteira (usado no destaque grande).
+ */
+export function cardImovel(imovel, { alto = false, prioridade = false } = {}) {
+  const ficha = [
+    imovel.quartos ? `<span><i class="ph ph-bed ico" aria-hidden="true"></i>${imovel.quartos} ${imovel.quartos > 1 ? 'quartos' : 'quarto'}</span>` : '',
+    imovel.banheiros ? `<span><i class="ph ph-shower ico" aria-hidden="true"></i>${imovel.banheiros}</span>` : '',
+    imovel.vagas ? `<span><i class="ph ph-car ico" aria-hidden="true"></i>${imovel.vagas}</span>` : '',
+    area(imovel.area_util ?? imovel.area_total)
+      ? `<span><i class="ph ph-ruler ico" aria-hidden="true"></i>${area(imovel.area_util ?? imovel.area_total)}</span>` : '',
+  ].filter(Boolean).join('');
+
+  const selo = ROTULO_STATUS[imovel.status]
+    ? `<span class="card__selo card__selo--reservado">${ROTULO_STATUS[imovel.status]}</span>`
+    : `<span class="card__selo">${imovel.finalidade === 'aluguel' ? 'Aluguel' : 'Venda'}</span>`;
+
+  const foto = imovel.capa
+    ? `<img src="${escapar(imovel.capa)}" alt="Foto de ${escapar(imovel.titulo)}"
+            ${prioridade ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`
+    : `<div class="esqueleto" style="width:100%;height:100%" aria-hidden="true"></div>`;
+
+  // Anúncio com vídeo recebe muito mais clique que anúncio só com foto, então
+  // isso precisa aparecer ANTES do clique, na grade.
+  const temVideo = Number(imovel.total_videos ?? imovel.videos?.length ?? 0) > 0;
+  const marcaVideo = temVideo
+    ? '<span class="card__video"><i class="ph ph-play-circle" aria-hidden="true"></i>Vídeo</span>'
+    : '';
+
+  return `
+<article class="card${alto ? ' card--alto' : ''}">
+  <div class="card__foto">${foto}${selo}${marcaVideo}</div>
+  <div class="card__corpo">
+    <p class="card__local">${escapar(TIPOS[imovel.tipo] ?? imovel.tipo)} em ${escapar(imovel.bairro)}, ${escapar(imovel.cidade)}</p>
+    <h3 class="card__titulo">
+      <a class="card__link" href="imovel.html?cod=${encodeURIComponent(imovel.codigo)}">${escapar(imovel.titulo)}</a>
+    </h3>
+    <p class="card__preco">${precoRotulo(imovel)}</p>
+    ${ficha ? `<div class="ficha">${ficha}</div>` : ''}
+  </div>
+</article>`;
+}
+
+/** Placeholders com a MESMA forma do resultado final, pra não haver salto
+ *  de layout quando os dados chegam. */
+export const esqueletos = (n) =>
+  Array.from({ length: n }, () => '<div class="esqueleto esqueleto--card"></div>').join('');
+
+export function aviso({ icone = 'ph-house-line', titulo, texto, erro = false }) {
+  return `
+<div class="aviso${erro ? ' aviso--erro' : ''}">
+  <i class="ph ${icone}" style="font-size:2rem;color:var(--tinta-fraca)" aria-hidden="true"></i>
+  <p class="aviso__titulo">${escapar(titulo)}</p>
+  <p>${escapar(texto)}</p>
+</div>`;
+}
+
+/**
+ * A faixa do topo. Só aparece no modo "exemplo", ou seja, enquanto a carteira
+ * de verdade estiver vazia — assim que o primeiro imóvel for cadastrado no
+ * painel, ela some sozinha e ninguém precisa lembrar de tirá-la.
+ *
+ * O texto fala com o DONO do site, não com o visitante: quem lê isso é quem
+ * está montando o catálogo.
+ */
+export async function ligarFaixaDeExemplo() {
+  const faixa = document.querySelector('#faixa-demo');
+  if (!faixa) return;
+
+  if (await modoAtual() !== MODO.EXEMPLO) return;
+
+  faixa.innerHTML =
+    'Estes imóveis são de exemplo. Cadastre os de verdade na ' +
+    '<a href="admin.html">Área do corretor</a>, e eles somem sozinhos.';
+  faixa.hidden = false;
+
+  // O cabeçalho é fixo e acabou de crescer uma linha. Sem passar a altura real
+  // pro CSS, o <h1> do hero passa por baixo dele.
+  document.documentElement.style.setProperty('--altura-faixa', `${faixa.offsetHeight}px`);
+}
+
+/**
+ * Lê um link de vídeo colado pelo corretor e diz o que dá pra fazer com ele.
+ * Aceita link cru, encurtado, com ?si= de compartilhamento e /shorts/.
+ *
+ * O Instagram não permite embutir post sem passar pela API oficial, então
+ * ali a saída é honesta: vira um cartão que abre no Instagram, e não um
+ * player quebrado dentro da página.
+ *
+ * @returns {{plataforma: string, embutir: string|null, capa: string|null}}
+ */
+export function lerLinkDeVideo(bruto) {
+  const texto = String(bruto ?? '').trim();
+  let u;
+  try { u = new URL(texto); } catch { return { plataforma: 'invalido', embutir: null, capa: null }; }
+
+  const host = u.hostname.replace(/^www\./, '');
+
+  if (host === 'youtu.be' || host.endsWith('youtube.com')) {
+    const id = host === 'youtu.be'
+      ? u.pathname.slice(1)
+      : (u.searchParams.get('v') ?? u.pathname.split('/').filter(Boolean).pop());
+    if (!id) return { plataforma: 'invalido', embutir: null, capa: null };
+    return {
+      plataforma: 'youtube',
+      embutir: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`,
+      capa: `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`,
+    };
+  }
+
+  if (host.endsWith('vimeo.com')) {
+    const id = u.pathname.split('/').filter(Boolean).pop();
+    return id
+      ? { plataforma: 'vimeo', embutir: `https://player.vimeo.com/video/${encodeURIComponent(id)}`, capa: null }
+      : { plataforma: 'invalido', embutir: null, capa: null };
+  }
+
+  if (host.endsWith('instagram.com')) return { plataforma: 'instagram', embutir: null, capa: null };
+  if (host.endsWith('drive.google.com')) return { plataforma: 'drive', embutir: null, capa: null };
+
+  // Link direto pro arquivo (.mp4 numa hospedagem qualquer) toca no player nativo.
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(u.pathname)) {
+    return { plataforma: 'arquivo', embutir: null, capa: null };
+  }
+
+  return { plataforma: 'outro', embutir: null, capa: null };
+}
+
+/** "R$ 450.000" digitado vira 450000. Aceita o que a pessoa quiser digitar. */
+export function lerNumero(texto) {
+  const so = String(texto ?? '').replace(/[^\d]/g, '');
+  return so ? Number(so) : null;
+}
+
+/** Máscara leve de moeda enquanto a pessoa digita no filtro de preço. */
+export function mascararMoeda(input) {
+  input.addEventListener('input', () => {
+    const n = lerNumero(input.value);
+    input.value = n == null ? '' : n.toLocaleString('pt-BR');
+  });
+}

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel do corretor | Ah Imobiliária</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- Tema unico claro: uma cor so, sem media. Ver css/tokens.css. -->
+<meta name="theme-color" content="#6e181b">
+<meta name="color-scheme" content="light">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<header class="cabecalho encolhido">
+  <div class="container cabecalho__linha">
+    <a class="marca" href="index.html" aria-label="Ah Imobiliária, ir para o início">
+      <img class="marca__simbolo" src="marca.svg" alt="" width="240" height="224" decoding="async">
+      <span class="marca__texto">
+        <span class="marca__ah">Ah</span><span class="marca__resto">Imobiliária</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="nav__link" href="index.html" target="_blank" rel="noopener">Ver o site</a>
+    </nav>
+    <button class="btn btn--secundario cabecalho__acao" id="sair" hidden>Sair</button>
+  </div>
+</header>
+
+<main class="container admin">
+
+  <!-- Onde a carteira está sendo gravada. Escrito por js/admin.js: no modo
+       local ele avisa que vale só neste navegador, na nuvem ele some. -->
+  <div class="recado" id="recado-modo" hidden></div>
+
+  <!-- ------------------------------------------------------------ login -->
+  <form class="login" id="login" hidden>
+    <h1>Painel do corretor</h1>
+    <p>Entre com o e-mail cadastrado no Supabase.</p>
+
+    <div class="campo">
+      <label class="campo__rotulo" for="login-email">E-mail</label>
+      <input type="email" id="login-email" autocomplete="username" required>
+    </div>
+    <div class="campo">
+      <label class="campo__rotulo" for="login-senha">Senha</label>
+      <input type="password" id="login-senha" autocomplete="current-password" required>
+    </div>
+
+    <div class="recado recado--erro" id="login-erro" hidden></div>
+    <button class="btn" type="submit" id="login-botao">Entrar</button>
+  </form>
+
+  <!-- ------------------------------------------------------------ painel -->
+  <div id="painel" hidden>
+    <div class="admin__topo">
+      <div>
+        <h1>Imóveis</h1>
+        <p class="admin__usuario" id="quem"></p>
+      </div>
+      <button class="btn" id="novo">
+        <i class="ph ph-plus ico" aria-hidden="true"></i>Cadastrar imóvel
+      </button>
+    </div>
+
+    <div class="abas" role="tablist">
+      <button class="aba" id="aba-imoveis" role="tab" aria-selected="true">Imóveis</button>
+      <button class="aba" id="aba-leads" role="tab" aria-selected="false">Contatos recebidos</button>
+      <button class="aba" id="aba-backup" role="tab" aria-selected="false">Backup</button>
+    </div>
+
+    <section id="vista-imoveis">
+      <div class="lista" id="lista"></div>
+    </section>
+
+    <section id="vista-leads" hidden>
+      <div class="lista" id="lista-leads"></div>
+    </section>
+
+    <!-- Backup existe porque no modo local a carteira mora no navegador, e
+         navegador se limpa, se troca e se formata. Um .json na mão do dono é
+         a diferença entre "perdi tudo" e "perdi cinco minutos". -->
+    <section id="vista-backup" hidden>
+      <div class="bloco">
+        <h2>Guardar uma cópia</h2>
+        <p class="dica" id="backup-explica"></p>
+        <div class="acoes-forma">
+          <button class="btn" type="button" id="exportar">
+            <i class="ph ph-download-simple ico" aria-hidden="true"></i>Baixar cópia da carteira
+          </button>
+          <button class="btn btn--secundario" type="button" id="importar">
+            <i class="ph ph-upload-simple ico" aria-hidden="true"></i>Restaurar de um arquivo
+          </button>
+          <input type="file" id="arquivo-backup" accept="application/json,.json" hidden>
+        </div>
+        <div class="recado" id="backup-recado" hidden></div>
+        <p class="dica" id="backup-espaco"></p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ------------------------------------------------------- formulário -->
+  <form class="forma" id="forma" hidden>
+    <div class="admin__topo">
+      <h1 id="forma-titulo">Cadastrar imóvel</h1>
+      <button class="btn-mini" type="button" id="cancelar">Voltar para a lista</button>
+    </div>
+
+    <div class="bloco">
+      <h2>O básico</h2>
+      <div class="grade-campos grade-campos--2">
+        <div class="campo campo--largo">
+          <label class="campo__rotulo" for="i-titulo">Título do anúncio</label>
+          <input type="text" id="i-titulo" name="titulo" maxlength="140" required
+                 placeholder="Ex: Apartamento de 3 quartos reformado no Meireles">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-finalidade">Finalidade</label>
+          <select id="i-finalidade" name="finalidade" required>
+            <option value="venda">Venda</option>
+            <option value="aluguel">Aluguel</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-tipo">Tipo</label>
+          <select id="i-tipo" name="tipo" required>
+            <option value="casa">Casa</option>
+            <option value="apartamento">Apartamento</option>
+            <option value="terreno">Terreno</option>
+            <option value="comercial">Comercial</option>
+            <option value="rural">Rural</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grade-campos">
+        <div class="campo">
+          <label class="campo__rotulo" for="i-preco">Valor (R$)</label>
+          <input type="text" id="i-preco" name="preco" inputmode="numeric" required>
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-condominio">Condomínio (R$/mês)</label>
+          <input type="text" id="i-condominio" name="condominio" inputmode="numeric">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-iptu">IPTU (R$/ano)</label>
+          <input type="text" id="i-iptu" name="iptu" inputmode="numeric">
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>Medidas</h2>
+      <div class="grade-campos">
+        <div class="campo">
+          <label class="campo__rotulo" for="i-quartos">Quartos</label>
+          <input type="number" id="i-quartos" name="quartos" min="0" max="30" value="0">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-suites">Suítes</label>
+          <input type="number" id="i-suites" name="suites" min="0" max="30" value="0">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-banheiros">Banheiros</label>
+          <input type="number" id="i-banheiros" name="banheiros" min="0" max="30" value="0">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-vagas">Vagas</label>
+          <input type="number" id="i-vagas" name="vagas" min="0" max="30" value="0">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-area-util">Área útil (m²)</label>
+          <input type="number" id="i-area-util" name="area_util" min="0" step="0.01">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-area-total">Área total (m²)</label>
+          <input type="number" id="i-area-total" name="area_total" min="0" step="0.01">
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>Descrição</h2>
+      <div class="campo">
+        <label class="campo__rotulo" for="i-descricao">Texto que aparece no anúncio</label>
+        <textarea id="i-descricao" name="descricao" rows="6"
+                  placeholder="Escreva como você contaria pro cliente. O que chama atenção, o que fica perto, o que foi reformado."></textarea>
+      </div>
+      <div class="campo">
+        <label class="campo__rotulo" for="i-comodidades">O que tem</label>
+        <input type="text" id="i-comodidades" name="comodidades"
+               placeholder="Piscina, Churrasqueira, Portaria 24h">
+        <span class="dica">Separe por vírgula. Cada item vira uma etiqueta na página do imóvel.</span>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>Onde fica</h2>
+      <div class="busca-endereco">
+        <input class="campo__entrada" type="text" id="i-busca-endereco"
+               placeholder="Digite o endereço e clique em localizar">
+        <button class="btn btn--secundario" type="button" id="localizar">
+          <i class="ph ph-map-pin ico" aria-hidden="true"></i>Localizar
+        </button>
+      </div>
+      <span class="dica">Você também pode clicar direto no mapa para marcar o ponto exato.</span>
+
+      <div class="mapa-admin" id="mapa-admin"></div>
+
+      <div class="grade-campos">
+        <div class="campo">
+          <label class="campo__rotulo" for="i-cep">CEP</label>
+          <input type="text" id="i-cep" name="cep" inputmode="numeric" maxlength="9">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-logradouro">Rua</label>
+          <input type="text" id="i-logradouro" name="logradouro">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-numero">Número</label>
+          <input type="text" id="i-numero" name="numero">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-complemento">Complemento</label>
+          <input type="text" id="i-complemento" name="complemento">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-bairro">Bairro</label>
+          <input type="text" id="i-bairro" name="bairro" required>
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-cidade">Cidade</label>
+          <input type="text" id="i-cidade" name="cidade" required value="Fortaleza">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="i-uf">UF</label>
+          <input type="text" id="i-uf" name="uf" maxlength="2" value="CE">
+        </div>
+      </div>
+
+      <label class="marcacao">
+        <input type="checkbox" id="i-mostrar-endereco" name="mostrar_endereco">
+        <span>
+          Mostrar o endereço completo no site
+          <small>Desmarcado, o site exibe só o bairro e o mapa vira um círculo aproximado.</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="bloco">
+      <h2>Fotos</h2>
+      <div class="solta" id="solta" tabindex="0" role="button"
+           aria-label="Escolher fotos do imóvel">
+        <i class="ph ph-images" aria-hidden="true"></i>
+        <strong>Arraste as fotos aqui ou clique para escolher</strong>
+        <span class="dica">
+          Elas são reduzidas para 1600px e convertidas em WebP no seu próprio
+          navegador antes de subir. Foto de celular de 5 MB vira cerca de 200 KB.
+        </span>
+      </div>
+      <input type="file" id="arquivos" accept="image/*" multiple hidden>
+
+      <div class="progresso" id="progresso" hidden><span></span></div>
+      <div class="fotos-grade" id="fotos"></div>
+      <span class="dica" id="fotos-dica" hidden>
+        A primeira foto é a capa que aparece no catálogo. Use as setas para mudar a ordem.
+      </span>
+    </div>
+
+    <!-- Vídeo entra por dois caminhos porque os dois acontecem na vida real:
+         o corretor grava um tour no celular (arquivo) ou já postou o reel no
+         Instagram e só quer apontar pra lá (link). -->
+    <div class="bloco">
+      <h2>Vídeos</h2>
+      <div class="solta" id="solta-video" tabindex="0" role="button"
+           aria-label="Escolher vídeos do imóvel">
+        <i class="ph ph-video-camera" aria-hidden="true"></i>
+        <strong>Arraste um vídeo aqui ou clique para escolher</strong>
+        <span class="dica" id="dica-video"></span>
+      </div>
+      <input type="file" id="arquivos-video" accept="video/*" multiple hidden>
+
+      <div class="ou-link">
+        <span class="ou-link__rotulo">ou aponte para um vídeo que já está publicado</span>
+        <div class="ou-link__linha">
+          <input class="campo__entrada" type="url" id="i-video-link" inputmode="url"
+                 placeholder="Cole o link do YouTube, Instagram, Vimeo ou Drive">
+          <button class="btn btn--secundario" type="button" id="add-video-link">Adicionar</button>
+        </div>
+        <span class="dica">Link não ocupa espaço nenhum e nunca estoura o limite de armazenamento.</span>
+      </div>
+
+      <div class="progresso" id="progresso-video" hidden><span></span></div>
+      <div class="videos-grade" id="videos"></div>
+    </div>
+
+    <div class="bloco">
+      <h2>Publicação</h2>
+      <div class="grade-campos">
+        <div class="campo">
+          <label class="campo__rotulo" for="i-status">Situação</label>
+          <select id="i-status" name="status">
+            <option value="rascunho">Rascunho (não aparece no site)</option>
+            <option value="disponivel">Disponível</option>
+            <option value="reservado">Reservado</option>
+            <option value="vendido">Vendido</option>
+            <option value="alugado">Alugado</option>
+          </select>
+        </div>
+      </div>
+      <label class="marcacao">
+        <input type="checkbox" id="i-destaque" name="destaque">
+        <span>
+          Destacar na página inicial
+          <small>A home mostra os três destaques mais recentes.</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="recado" id="forma-recado" hidden></div>
+
+    <div class="acoes-forma">
+      <button class="btn" type="submit" id="salvar">Salvar imóvel</button>
+      <button class="btn btn--secundario" type="button" id="cancelar-2">Cancelar</button>
+      <button class="btn-mini btn-mini--perigo" type="button" id="excluir" hidden>Excluir imóvel</button>
+    </div>
+  </form>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

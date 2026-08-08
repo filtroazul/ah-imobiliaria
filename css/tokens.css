@@ -1,0 +1,106 @@
+/* ==========================================================================
+   Ah Imobiliária — tokens
+   --------------------------------------------------------------------------
+   Todo o visual do site sai daqui. As duas cores de marca foram amostradas no
+   pixel da logo do Alejandro Hernandez (IMG-20251121-WA0000.jpg): o vinho das
+   letras e o dourado do anel. Não são mais chute.
+
+   REGRAS TRAVADAS (não quebrar em componente novo):
+   1. Acento    → vermelho é a ÚNICA cor de ação. Dourado nunca vira botão.
+   2. Dourado   → só fio, borda e detalhe. Nunca texto sobre fundo claro
+                  (contraste 2.1:1, reprova em acessibilidade). Para texto
+                  dourado existe --dourado-texto, que passa em AA.
+   3. Raio      → cartão 18px, campo 12px, botão pílula. Sem exceção.
+   4. Sombra    → sempre tingida no tom do fundo, nunca preto puro.
+   5. TEMA ÚNICO CLARO. Não reintroduzir @media (prefers-color-scheme: dark)
+                  em lugar nenhum deste projeto. Existia um tema escuro e ele
+                  foi REMOVIDO a pedido do dono em 08/08/2026: pra sobreviver
+                  ao fundo preto o vinho tinha que ser clareado até #cb4d52,
+                  que lido sozinho é um salmão — não é a cor da marca. Como
+                  quase todo mundo hoje usa o Windows no escuro, era ESSA a
+                  versão que o cliente via. A logo dele é impressa num cartão
+                  dourado; champanhe é o fundo dela, não uma preferência.
+   ========================================================================== */
+
+:root {
+  /* ---- marca: amostrado no pixel da logo ---- */
+  --marca-vermelho: #6e181b; /* vinho das letras */
+  --marca-dourado: #c3a35c; /* meio do gradiente do anel */
+
+  /* ---- derivadas do vermelho ---- */
+  --vermelho: var(--marca-vermelho);
+  --vermelho-escuro: #561417;
+  --vermelho-fraco: rgba(110, 24, 27, 0.08);
+
+  /* ---- derivadas do dourado ---- */
+  --dourado: var(--marca-dourado);
+  --dourado-fio: rgba(195, 163, 92, 0.55);
+  --dourado-texto: #7a5f1f; /* 5,6:1 sobre --bg, passa em AA */
+  /* Citação literal do degradê do cartão da logo: dourado nas bordas, claro no
+     meio. Só o hero usa, e diluído — a arte original é forte porque tem 3cm de
+     largura, uma tela inteira nesse tom vira parede de mostarda. */
+  --hero-veu: linear-gradient(90deg,
+    #ead9ae 0%, #f8f1dc 34%, #fefaef 50%, #f8f1dc 66%, #ead9ae 100%);
+
+  /* Reflexo do dourado da logo, para varreduras e fios animados. */
+  --dourado-brilho: linear-gradient(100deg,
+    rgba(195, 163, 92, 0) 0%,
+    rgba(231, 213, 157, 0.85) 45%,
+    rgba(195, 163, 92, 0) 100%);
+
+  /* ---- superfícies (modo claro) ----
+     Champanhe, não branco. O fundo da arte da logo é um degradê dourado que
+     vai de #c9ae6b nas bordas a #efdfa1 no centro; estas superfícies são essa
+     mesma família bem diluída. Branco neutro deixava a logo parecer colada
+     por cima do site em vez de pertencer a ele. */
+  --bg: #faf5e9;
+  --bg-alto: #fffdf7;
+  --bg-fundo: #f0e6d0;
+  --linha: rgba(40, 28, 12, 0.12);
+  --linha-forte: rgba(40, 28, 12, 0.22);
+
+  /* ---- tinta ---- */
+  --tinta: #1c1510;
+  --tinta-media: #554d47; /* 7,6:1 sobre --bg */
+  /* Estava #7d746d, que dava 4,27:1 e reprovava em AA mesmo antes de o fundo
+     esquentar. Escurecido até passar. */
+  --tinta-fraca: #6f665f; /* 5,2:1 sobre --bg */
+  --sobre-vermelho: #fdf6ec; /* creme, não branco: combina com o dourado */
+
+  /* ---- raio ---- */
+  --r-card: 18px;
+  --r-campo: 12px;
+  --r-btn: 999px;
+
+  /* ---- sombra ---- */
+  --sombra: 0 1px 2px rgba(23, 18, 15, 0.04), 0 12px 32px -14px rgba(23, 18, 15, 0.18);
+  --sombra-alta: 0 2px 6px rgba(23, 18, 15, 0.06), 0 30px 64px -22px rgba(23, 18, 15, 0.3);
+
+  /* ---- ritmo ---- */
+  --largura: 1320px;
+  --gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --pad-secao: clamp(5rem, 11vh, 8.5rem);
+
+  /* ---- tipografia ---- */
+  --fonte-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --fonte-texto: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- movimento ---- */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --rapido: 0.22s var(--ease);
+  --medio: 0.45s var(--ease);
+
+  /* ---- camadas: toda a escala de z-index do site cabe aqui ---- */
+  --z-mapa: 1;
+  --z-flutuante: 10;
+  --z-cabecalho: 50;
+  --z-modal: 100;
+  --z-grao: 200;
+  --z-abertura: 300; /* acima do grão: a cortina cobre a página inteira */
+
+  /* `light` sozinho, sem `dark`. Isto não é decoração: é o que impede o
+     navegador de pintar de preto os controles nativos (select, scrollbar,
+     campo de data) quando o sistema está no modo escuro. Sem esta linha o
+     site fica claro e os <select> do filtro ficam pretos. */
+  color-scheme: light;
+}

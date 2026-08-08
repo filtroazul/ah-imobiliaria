@@ -1,0 +1,386 @@
+/* ==========================================================================
+   Painel do corretor. Ferramenta de trabalho, não peça de marketing:
+   densidade maior, zero animação de entrada, tudo à mão.
+   ========================================================================== */
+
+.admin { padding-block: 6.5rem 4rem; }
+
+.admin__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.admin__topo h1 { font-size: 1.7rem; }
+.admin__usuario { font-size: 0.88rem; color: var(--tinta-fraca); }
+
+/* --------------------------------------------------------------- login ---- */
+
+.login {
+  max-width: 26rem;
+  margin: 6rem auto;
+  display: grid;
+  gap: 1.1rem;
+  padding: 2rem;
+  background: var(--bg-alto);
+  border: 1px solid var(--linha);
+  border-top: 2px solid var(--dourado);
+  border-radius: var(--r-card);
+  box-shadow: var(--sombra);
+}
+.login h1 { font-size: 1.4rem; }
+.login p { font-size: 0.92rem; color: var(--tinta-media); }
+.login .btn { width: 100%; }
+
+/* --------------------------------------------------------------- abas ---- */
+
+.abas {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--linha);
+}
+.aba {
+  padding: 0.7rem 1.1rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--tinta-fraca);
+  font-family: var(--fonte-display);
+  font-size: 0.96rem;
+  transition: color var(--rapido), border-color var(--rapido);
+}
+.aba:hover { color: var(--tinta); }
+.aba[aria-selected='true'] { color: var(--vermelho); border-bottom-color: var(--vermelho); }
+
+/* -------------------------------------------------------------- lista ---- */
+
+.lista { display: grid; gap: 0.6rem; }
+
+.linha {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem;
+  background: var(--bg-alto);
+  border: 1px solid var(--linha);
+  border-radius: var(--r-campo);
+}
+.linha__foto {
+  width: 4.5rem; height: 3.4rem;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--bg-fundo);
+}
+.linha__titulo { font-weight: 500; }
+.linha__meta { font-size: 0.85rem; color: var(--tinta-fraca); }
+.linha__acoes { display: flex; gap: 0.4rem; }
+
+.pilula {
+  display: inline-block;
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--r-btn);
+  font-size: 0.76rem;
+  font-weight: 600;
+  border: 1px solid var(--linha-forte);
+}
+.pilula--disponivel { color: var(--dourado-texto); border-color: var(--dourado-fio); }
+.pilula--rascunho { color: var(--tinta-fraca); }
+.pilula--vendido,
+.pilula--alugado { color: var(--vermelho); border-color: var(--vermelho); }
+
+.btn-mini {
+  /* inline-flex + min-height porque "Editar", "Ver" e "Voltar para a lista"
+     são os botões que o corretor mais aperta, e no celular davam 37px. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid var(--linha-forte);
+  border-radius: var(--r-campo);
+  background: none;
+  font-size: 0.85rem;
+  transition: border-color var(--rapido), color var(--rapido);
+}
+.btn-mini:hover { border-color: var(--vermelho); color: var(--vermelho); }
+.btn-mini--perigo:hover { border-color: var(--vermelho); background: var(--vermelho-fraco); }
+
+/* ----------------------------------------------------------- formulário --- */
+
+.forma { display: grid; gap: 1.6rem; }
+
+.bloco {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--bg-alto);
+  border: 1px solid var(--linha);
+  border-radius: var(--r-card);
+}
+.bloco > h2 {
+  font-size: 1.05rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--linha);
+}
+
+.grade-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+.grade-campos--2 { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.campo--largo { grid-column: 1 / -1; }
+
+.marcacao {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.94rem;
+}
+.marcacao input { width: 1.15rem; height: 1.15rem; accent-color: var(--vermelho); }
+.marcacao small { display: block; color: var(--tinta-fraca); font-size: 0.82rem; }
+
+.dica { font-size: 0.85rem; color: var(--tinta-fraca); }
+
+.acoes-forma {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+  position: sticky;
+  bottom: 0;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--linha);
+  border-radius: var(--r-card);
+}
+
+/* --------------------------------------------------------------- fotos ---- */
+
+.solta {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  padding: 2.2rem 1rem;
+  border: 2px dashed var(--linha-forte);
+  border-radius: var(--r-card);
+  text-align: center;
+  color: var(--tinta-media);
+  cursor: pointer;
+  transition: border-color var(--rapido), background var(--rapido);
+}
+.solta:hover,
+.solta.sobre { border-color: var(--vermelho); background: var(--vermelho-fraco); }
+.solta i { font-size: 1.8rem; color: var(--tinta-fraca); }
+
+.fotos-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+.foto-item {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--r-campo);
+  background: var(--bg-fundo);
+  border: 1px solid var(--linha);
+}
+.foto-item img { width: 100%; height: 100%; object-fit: cover; }
+.foto-item__capa {
+  position: absolute;
+  top: 0.4rem; left: 0.4rem;
+  padding: 0.16rem 0.5rem;
+  border-radius: var(--r-btn);
+  background: var(--vermelho);
+  color: var(--sobre-vermelho);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.foto-item__x {
+  position: absolute;
+  top: 0.4rem; right: 0.4rem;
+  width: 1.8rem; height: 1.8rem;
+  display: grid; place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-alto) 88%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.foto-item__x:hover { background: var(--vermelho); color: var(--sobre-vermelho); }
+
+/* Setas de ordem em vez de arrastar: a primeira foto é a capa do anúncio e
+   trocar a capa não pode depender de arrastar com precisão numa tela de
+   celular. Arrastar continua sendo o caminho bonito; isto é o que funciona. */
+.foto-item__ordem {
+  position: absolute;
+  left: 0.4rem; bottom: 0.4rem;
+  display: flex;
+  gap: 0.25rem;
+}
+.foto-item__ordem button {
+  width: 1.7rem; height: 1.7rem;
+  display: grid; place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-alto) 88%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+.foto-item__ordem button:hover:not(:disabled) {
+  background: var(--vermelho);
+  color: var(--sobre-vermelho);
+}
+.foto-item__ordem button:disabled { opacity: 0.35; cursor: default; }
+
+/* No dedo, os três controles da foto (◀ ▶ ✕) precisam de alvo maior. No mouse
+   não: ali eles competem com a própria foto e quanto menores, melhor. */
+@media (pointer: coarse) {
+  .foto-item__ordem button,
+  .foto-item__x { width: 2.6rem; height: 2.6rem; }
+  .fotos-grade { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+}
+
+/* ------------------------------------------------------------- vídeos ---- */
+
+.ou-link {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--linha);
+}
+.ou-link__rotulo {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--tinta-media);
+}
+.ou-link__linha { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.ou-link__linha input { flex: 1 1 18rem; }
+
+.videos-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.videos-grade:empty { display: none; }
+
+.video-item {
+  position: relative;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--r-campo);
+  border: 1px solid var(--linha);
+  background: var(--bg-alto);
+}
+.video-item--ruim { border-color: var(--vermelho); }
+
+.video-item__capa {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: calc(var(--r-campo) - 4px);
+  background: var(--bg-fundo);
+}
+.video-item__capa img,
+.video-item__capa video { width: 100%; height: 100%; object-fit: cover; }
+.video-item__marca {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--tinta-fraca);
+  font-size: 1.6rem;
+}
+.video-item__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.2rem;
+  color: #fff;
+  /* O quadro do vídeo pode ser claro ou escuro; a sombra é o que garante que
+     o símbolo de play apareça nos dois casos. */
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.video-item__info { display: grid; gap: 0.15rem; min-width: 0; }
+.video-item__tipo {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dourado-texto);
+}
+.video-item__nome {
+  font-size: 0.8rem;
+  color: var(--tinta-fraca);
+  /* Link do YouTube não quebra sozinho e empurra o cartão inteiro. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progresso {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-fundo);
+  overflow: hidden;
+}
+.progresso span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--vermelho), var(--dourado));
+  transition: width 0.25s var(--ease);
+}
+
+/* ------------------------------------------------------ mapa do admin ---- */
+
+.mapa-admin {
+  height: 20rem;
+  border-radius: var(--r-card);
+  border: 1px solid var(--linha);
+  overflow: hidden;
+}
+.busca-endereco { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.busca-endereco input { flex: 1 1 16rem; }
+
+/* --------------------------------------------------------------- aviso ---- */
+
+.recado {
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--r-campo);
+  font-size: 0.92rem;
+  border: 1px solid var(--linha-forte);
+}
+.recado--ok { border-color: var(--dourado-fio); background: var(--vermelho-fraco); }
+.recado--erro { border-color: var(--vermelho); color: var(--vermelho); background: var(--vermelho-fraco); }
+/* Aviso não é erro: o modo local é um estado de trabalho legítimo, e pintá-lo
+   de vermelho faria parecer que alguma coisa quebrou. */
+.recado--aviso {
+  border-color: var(--dourado-fio);
+  background: linear-gradient(180deg, var(--bg-alto), var(--bg-fundo));
+}
+.recado--aviso code {
+  padding: 0.05em 0.35em;
+  border-radius: 5px;
+  background: var(--vermelho-fraco);
+  font-size: 0.9em;
+}
+.recado + .recado, .recado { margin-block: 0.4rem; }
+
+@media (max-width: 720px) {
+  .linha { grid-template-columns: 3.5rem minmax(0, 1fr); }
+  .linha__estado, .linha__acoes { grid-column: 1 / -1; }
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ah Imobiliária">
+<!-- Versão da marca para 16px. NÃO é o marca.svg reduzido: os dois anéis
+     dourados e o fio do telhado viram borrão nesse tamanho, então saíram.
+     Sobra a silhueta que ainda se reconhece na aba: telhado, AH e a chave. -->
+<rect width="64" height="64" rx="14" fill="#6e181b"/>
+<g fill="none" stroke="#f7ecd6" stroke-linecap="butt">
+  <path stroke-width="7" d="M19.5 50 L19.5 33 C19.5 26 24 22.5 32 22.5"/>
+  <path stroke-width="8" d="M32 19 L32 50"/>
+  <path stroke-width="7" d="M44.5 25 L44.5 50"/>
+  <path stroke-width="6.5" d="M16 36 L48 36"/>
+</g>
+<path fill="#f7ecd6" d="M32 11 L60 31 L32 21 L4 31 Z"/>
+<g fill="none" stroke="#d9be79">
+  <path stroke-width="2" d="M32 15 L32 35"/>
+  <circle cx="32" cy="40.5" r="3.4" stroke-width="2.4"/>
+  <path stroke-width="3" d="M32 44.5 L32 51"/>
+  <path stroke-width="2.4" d="M32 47.5 L37 47.5"/>
+</g>
+<path fill="#d9be79" d="M28.7 50 L35.3 50 L32 57 Z"/>
+</svg>

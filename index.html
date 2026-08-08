@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ah Imobiliária | Casas e apartamentos em Fortaleza e região</title>
+<meta name="description" content="Catálogo de casas, apartamentos, terrenos e pontos comerciais para comprar ou alugar em Fortaleza e região. Atendimento direto com corretor.">
+<!-- Tema unico claro: uma cor so, sem media. Ver css/tokens.css. -->
+<meta name="theme-color" content="#6e181b">
+<meta name="color-scheme" content="light">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ah Imobiliária">
+<meta property="og:description" content="Casas, apartamentos e terrenos para comprar ou alugar em Fortaleza e região.">
+<meta property="og:locale" content="pt_BR">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/site.css">
+
+<!-- Marca que pode animar ANTES do primeiro paint. Se isso rodasse só no
+     app.js, o conteúdo apareceria, sumiria e voltaria animando. Se o GSAP
+     não carregar, o app.js remove a classe e tudo fica visível.
+
+     A abertura é decidida aqui pelo mesmo motivo: se fosse no módulo, ela
+     piscaria depois da página já desenhada. Só na primeira visita da aba —
+     ver a logo se desenhar é bonito uma vez, irritante na quinta. -->
+<script>
+  (function () {
+    var raiz = document.documentElement;
+    var podeAnimar = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (podeAnimar) raiz.classList.add('motion-ok');
+
+    var jaViu = false;
+    // Storage bloqueado (alguns modos anônimos) só faz a abertura repetir.
+    try {
+      jaViu = sessionStorage.getItem('ah-abertura') === '1';
+      sessionStorage.setItem('ah-abertura', '1');
+    } catch (e) { /* segue sem lembrar */ }
+
+    // A abertura entra INDEPENDENTE de prefers-reduced-motion, e é de
+    // propósito. Antes ela dependia de podeAnimar, e como o PC do dono tem as
+    // animações do Windows desligadas, ele nunca viu a abertura existir e
+    // pediu "bota uma intro com a logo" — a intro estava lá o tempo todo.
+    // Movimento reduzido não quer dizer "sem abertura", quer dizer "sem
+    // traço se desenhando": o CSS troca por um aparecer suave de 1,5s.
+    if (!jaViu) {
+      raiz.classList.add('com-abertura');
+      if (!podeAnimar) raiz.classList.add('abertura-calma');
+    }
+  })();
+</script>
+</head>
+<body>
+
+<!-- ====================================================== abertura ========
+     A logo se desenhando. Só existe quando o <head> escreveu .com-abertura na
+     raiz — ou seja: primeira visita da aba E movimento permitido. O CSS toca
+     tudo sozinho e termina em visibility:hidden com animation-fill-mode:
+     forwards, então mesmo se o JS morrer no meio a cortina sai da frente.
+
+     A geometria abaixo é a mesma do marca.svg, repetida porque aqui cada
+     traço precisa de classe própria pra ser desenhado na ordem certa.
+     Mexeu num, mexe no outro.
+     ==================================================================== -->
+<div class="abertura" id="abertura" aria-hidden="true">
+  <svg class="abertura__marca" viewBox="0 0 240 224">
+    <defs>
+      <linearGradient id="ab-ouro" gradientUnits="userSpaceOnUse" x1="24" y1="14" x2="206" y2="206">
+        <stop offset="0" stop-color="#a8873e"/>
+        <stop offset="0.3" stop-color="#e7d59d"/>
+        <stop offset="0.56" stop-color="#c3a45d"/>
+        <stop offset="1" stop-color="#8d7132"/>
+      </linearGradient>
+    </defs>
+
+    <g class="ab-ouro">
+      <circle class="ab-traco ab-anel" cx="120" cy="112" r="95" stroke-width="2.6" pathLength="1"/>
+      <path class="ab-traco ab-anel2" stroke-width="6.2" stroke-linecap="round" pathLength="1"
+            d="M101.9 197.2 A87.3 87.3 0 1 1 138.1 197.2"/>
+    </g>
+
+    <g class="ab-vinho">
+      <path class="ab-traco ab-letra ab-l1" stroke-width="23" pathLength="1"
+            d="M75 166 L75 110 C75 78 95 66 120 66"/>
+      <path class="ab-traco ab-letra ab-l2" stroke-width="25" pathLength="1" d="M120 50 L120 166"/>
+      <path class="ab-traco ab-letra ab-l3" stroke-width="23" pathLength="1" d="M164 70 L164 166"/>
+      <path class="ab-traco ab-letra ab-l4" stroke-width="20" pathLength="1" d="M63.5 114.5 L175.5 114.5"/>
+    </g>
+
+    <path class="ab-telhado" d="M120 31 L231 109 L120 57 L9 109 Z"/>
+    <path class="ab-traco ab-fio ab-ouro" stroke-width="2" stroke-linejoin="round" pathLength="1"
+          d="M25 99.6 L120 44 L215 99.6"/>
+
+    <g class="ab-chave ab-ouro">
+      <path class="ab-traco ab-haste" stroke-width="5" pathLength="1" d="M120 38 L120 131"/>
+      <circle class="ab-traco ab-argola" cx="120" cy="147" r="12" stroke-width="7.5" pathLength="1"/>
+      <path class="ab-traco ab-haste2" stroke-width="9" pathLength="1" d="M120 163 L120 192"/>
+      <path class="ab-traco ab-dente" stroke-width="7" pathLength="1" d="M120 178 L136 178"/>
+      <path class="ab-ponta" d="M111 189 L129 189 L120 207 Z"/>
+    </g>
+  </svg>
+
+  <p class="abertura__nome"><span>Ah</span> Imobiliária</p>
+  <!-- O nome por extenso e o CRECI estão impressos na própria arte da logo.
+       Ficam chumbados aqui, e não lidos do config.js, porque a abertura tem
+       que estar pintada antes de qualquer módulo carregar. -->
+  <p class="abertura__assinatura">Alejandro Hernandez <i>·</i> Corretor de Imóveis <i>·</i> CRECI-CE 28277</p>
+</div>
+
+<div class="grao" aria-hidden="true"></div>
+
+<header class="cabecalho" id="cabecalho">
+  <!-- Fica DENTRO do cabeçalho fixo de propósito: solta no body, a faixa
+       passava por baixo dele e engolia a logo. Some sozinha assim que
+       config.js receber as chaves do Supabase. -->
+  <div class="faixa-demo" id="faixa-demo" hidden>
+    Estes imóveis são de exemplo. Cadastre os de verdade na <a href="admin.html">Área do corretor</a>.
+  </div>
+
+  <div class="container cabecalho__linha">
+    <a class="marca" href="index.html" aria-label="Ah Imobiliária, ir para o início">
+      <img class="marca__simbolo" src="marca.svg" alt="" width="240" height="224" decoding="async">
+      <span class="marca__texto">
+        <span class="marca__ah">Ah</span><span class="marca__resto">Imobiliária</span>
+      </span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Principal">
+      <a class="nav__link" href="#catalogo" data-finalidade="venda">Comprar</a>
+      <a class="nav__link" href="#catalogo" data-finalidade="aluguel">Alugar</a>
+      <a class="nav__link" href="#cobertura">A imobiliária</a>
+      <a class="nav__link" href="#contato">Contato</a>
+    </nav>
+
+    <a class="btn cabecalho__acao" id="zap-topo" href="#contato">
+      <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>Falar com corretor
+    </a>
+
+    <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="nav"
+            aria-label="Abrir menu">
+      <i class="ph ph-list" style="font-size:1.6rem" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- Quanto falta da página. Decoração não: numa landing longa como essa,
+       é o único indicador de que ainda tem catálogo lá embaixo. -->
+  <div class="progresso" id="progresso" aria-hidden="true"></div>
+</header>
+
+<main id="conteudo">
+
+  <!-- ==================================================== hero ========== -->
+  <section class="hero">
+    <div class="container hero__grade">
+      <div class="hero__copia">
+        <!-- Palavra a palavra, não bloco: o olho acompanha a frase sendo
+             escrita em vez de receber um parágrafo pronto de uma vez. Sem
+             .motion-ok o CSS não esconde nada e isso vira texto comum. -->
+        <h1 class="hero__titulo">
+          <span class="pal">Sua</span> <span class="pal">próxima</span> <span class="pal">casa</span><br>
+          <span class="pal">já</span> <span class="pal">está</span>
+          <span class="pal"><em>no</em></span> <span class="pal"><em>catálogo</em>.</span>
+        </h1>
+        <p class="hero__texto reveal-y">
+          Casas, apartamentos e terrenos para comprar ou alugar em Fortaleza e
+          região, com corretor de verdade do outro lado.
+        </p>
+        <div class="hero__acoes reveal-y">
+          <a class="btn" href="#catalogo">Ver imóveis</a>
+          <a class="btn btn--secundario" id="zap-hero" href="#contato">Falar com corretor</a>
+        </div>
+      </div>
+
+      <!-- TODO: trocar as duas fotos abaixo por foto real de imóvel da carteira. -->
+      <div class="hero__midia">
+        <div class="hero__fio" aria-hidden="true"></div>
+        <figure class="hero__foto hero__foto--principal" data-parallax="-60">
+          <img src="https://picsum.photos/seed/ah-hero-sala/1100/1375" width="1100" height="1375"
+               alt="Sala ampla e iluminada de um apartamento da carteira"
+               fetchpriority="high" decoding="async">
+        </figure>
+        <figure class="hero__foto hero__foto--secundaria" data-parallax="45">
+          <img src="https://picsum.photos/seed/ah-hero-fachada/620/825" width="620" height="825"
+               alt="Fachada de uma casa em condomínio fechado" loading="lazy" decoding="async">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== filtros ========= -->
+  <section class="busca container" aria-label="Buscar imóveis">
+    <form class="busca__caixa" id="form-busca">
+      <div class="campo">
+        <label class="campo__rotulo" for="f-finalidade">Quero</label>
+        <select id="f-finalidade" name="finalidade">
+          <option value="">Comprar ou alugar</option>
+          <option value="venda">Comprar</option>
+          <option value="aluguel">Alugar</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label class="campo__rotulo" for="f-tipo">Tipo</label>
+        <select id="f-tipo" name="tipo">
+          <option value="">Qualquer tipo</option>
+          <option value="casa">Casa</option>
+          <option value="apartamento">Apartamento</option>
+          <option value="terreno">Terreno</option>
+          <option value="comercial">Comercial</option>
+          <option value="rural">Rural</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label class="campo__rotulo" for="f-bairro">Bairro</label>
+        <select id="f-bairro" name="bairro">
+          <option value="">Todos os bairros</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label class="campo__rotulo" for="f-preco">Valor até</label>
+        <input type="text" id="f-preco" name="precoMax" inputmode="numeric"
+               placeholder="Sem limite" autocomplete="off">
+      </div>
+      <button class="btn" type="submit">
+        <i class="ph ph-magnifying-glass ico" aria-hidden="true"></i>Buscar
+      </button>
+    </form>
+  </section>
+
+  <!-- ================================================ destaques ========= -->
+  <section class="secao container" aria-labelledby="t-destaques">
+    <div class="secao__cabeca">
+      <h2 class="secao__titulo reveal-y" id="t-destaques">Três que valem a visita</h2>
+      <p class="secao__apoio reveal-y">
+        A seleção que o corretor deixaria por último se tivesse que abrir mão
+        de alguma coisa da carteira.
+      </p>
+    </div>
+    <div class="destaques__grade" id="destaques" aria-busy="true"></div>
+  </section>
+
+  <!-- ================================================= catálogo ========= -->
+  <section class="secao container" id="catalogo" aria-labelledby="t-catalogo">
+    <div class="secao__cabeca">
+      <h2 class="secao__titulo reveal-y" id="t-catalogo">Todo o catálogo</h2>
+      <p class="secao__apoio reveal-y">
+        <span class="contagem" id="contagem">Carregando a carteira.</span>
+      </p>
+    </div>
+    <div class="catalogo__grade" id="grade" aria-busy="true" aria-live="polite"></div>
+    <div class="catalogo__rodape">
+      <button class="btn btn--secundario" id="carregar-mais" hidden>Carregar mais imóveis</button>
+    </div>
+  </section>
+
+  <!-- ================================================ cobertura ========= -->
+  <!-- Seção presa na tela: a foto avança no zoom enquanto a pessoa rola.
+       Serve pra fixar onde a imobiliária atua antes de pedir o contato. -->
+  <section class="cobertura" id="cobertura" aria-labelledby="t-cobertura">
+    <div class="cobertura__fundo" id="cobertura-fundo"
+         style="background-image:url('https://picsum.photos/seed/ah-fortaleza-aerea/1920/1280')"
+         role="img" aria-label="Vista aérea de Fortaleza ao entardecer"></div>
+    <div class="container cobertura__conteudo">
+      <h2 class="cobertura__titulo reveal-y" id="t-cobertura">
+        A gente conhece a rua, não só o CEP.
+      </h2>
+      <p class="cobertura__apoio reveal-y">
+        Trinta e dois anos atendendo as mesmas ruas. Sabemos onde alaga, onde
+        tem barulho de bar na sexta e onde a escola tem fila de espera.
+      </p>
+      <nav class="bairros" id="bairros" aria-label="Bairros atendidos"></nav>
+    </div>
+  </section>
+
+  <!-- ================================================= percurso ========= -->
+  <section class="secao container" aria-labelledby="t-percurso">
+    <div class="secao__cabeca">
+      <h2 class="secao__titulo reveal-y" id="t-percurso">Do primeiro oi à chave na mão</h2>
+    </div>
+
+    <div class="percurso" id="percurso">
+      <div class="percurso__trilho" aria-hidden="true"></div>
+      <div class="percurso__progresso" id="percurso-progresso" aria-hidden="true"></div>
+
+      <div class="etapa reveal-y">
+        <div class="etapa__marca"><i class="ph ph-magnifying-glass ico" aria-hidden="true"></i></div>
+        <div>
+          <h3 class="etapa__titulo">Você encontra</h3>
+          <p>Filtra por bairro, valor e número de quartos. Cada anúncio mostra
+             o valor de condomínio e de IPTU antes de você perder tempo com visita.</p>
+        </div>
+      </div>
+
+      <div class="etapa reveal-y">
+        <div class="etapa__marca"><i class="ph ph-calendar-check ico" aria-hidden="true"></i></div>
+        <div>
+          <h3 class="etapa__titulo">A gente marca a visita</h3>
+          <p>Você manda mensagem citando o código do imóvel e o corretor
+             responsável responde com os horários que o proprietário liberou.</p>
+        </div>
+      </div>
+
+      <div class="etapa reveal-y">
+        <div class="etapa__marca"><i class="ph ph-key ico" aria-hidden="true"></i></div>
+        <div>
+          <h3 class="etapa__titulo">Fecha com a papelada conferida</h3>
+          <p>Certidão, matrícula e contrato passam pelo nosso jurídico antes da
+             assinatura. Se financiamento for o caminho, acompanhamos a análise no banco.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== depoimentos ======== -->
+  <section class="secao container" aria-labelledby="t-depoimentos">
+    <div class="secao__cabeca">
+      <h2 class="secao__titulo reveal-y" id="t-depoimentos">Quem já fechou com a gente</h2>
+    </div>
+
+    <div class="depoimentos">
+      <figure class="depoimento reveal-y">
+        <div class="depoimento__aspas" aria-hidden="true">&ldquo;</div>
+        <blockquote>Mandei mensagem num domingo à noite achando que ia ficar sem
+          resposta. Na terça eu já tinha visitado dois apartamentos.</blockquote>
+        <figcaption><b>Rafaela Nogueira</b>comprou no Meireles</figcaption>
+      </figure>
+
+      <figure class="depoimento reveal-y">
+        <div class="depoimento__aspas" aria-hidden="true">&ldquo;</div>
+        <blockquote>O que me pegou foi não ter enrolação com o valor. O preço do
+          anúncio foi exatamente o preço do contrato.</blockquote>
+        <figcaption><b>Cleiton Aragão</b>alugou na Aldeota</figcaption>
+      </figure>
+
+      <figure class="depoimento reveal-y">
+        <div class="depoimento__aspas" aria-hidden="true">&ldquo;</div>
+        <blockquote>Vendi a casa da minha mãe em cinco semanas. Cuidaram até da
+          papelada do inventário, que eu não sabia por onde começar.</blockquote>
+        <figcaption><b>Zuleide Farias</b>vendeu no Montese</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================== contato ========= -->
+  <section class="secao container" id="contato" aria-labelledby="t-contato">
+    <div class="contato">
+      <div>
+        <h2 class="secao__titulo reveal-y" id="t-contato">Conta o que você procura</h2>
+        <p class="secao__apoio reveal-y">
+          Deixa o contato aqui que o corretor te chama. Se preferir resolver
+          agora, o WhatsApp está logo abaixo.
+        </p>
+
+        <div class="canais">
+          <div class="canal">
+            <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>
+            <div><b>WhatsApp</b><span id="canal-zap">Carregando</span></div>
+          </div>
+          <div class="canal">
+            <i class="ph ph-instagram-logo ico" aria-hidden="true"></i>
+            <div><b>Instagram</b><span id="canal-insta">Carregando</span></div>
+          </div>
+          <div class="canal">
+            <i class="ph ph-map-pin ico" aria-hidden="true"></i>
+            <div><b>Onde ficamos</b><span id="canal-endereco">Carregando</span></div>
+          </div>
+        </div>
+      </div>
+
+      <form class="contato__forma" id="form-contato" novalidate>
+        <div class="contato__linha">
+          <div class="campo">
+            <label class="campo__rotulo" for="c-nome">Seu nome</label>
+            <input type="text" id="c-nome" name="nome" autocomplete="name" required>
+            <span class="campo__erro" id="erro-nome" hidden></span>
+          </div>
+          <div class="campo">
+            <label class="campo__rotulo" for="c-telefone">WhatsApp com DDD</label>
+            <input type="tel" id="c-telefone" name="telefone" inputmode="tel"
+                   autocomplete="tel" placeholder="(85) 90000-0000" required>
+            <span class="campo__erro" id="erro-telefone" hidden></span>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label class="campo__rotulo" for="c-mensagem">O que você procura</label>
+          <textarea id="c-mensagem" name="mensagem" rows="4"
+                    placeholder="Ex: apartamento de 2 quartos pra alugar perto do Cocó, até R$ 2.500"></textarea>
+        </div>
+
+        <div class="contato__estado" id="contato-estado" role="status" hidden></div>
+
+        <button class="btn" type="submit" id="contato-enviar">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer class="rodape">
+  <div class="container">
+    <div class="rodape__grade">
+      <div>
+        <a class="marca" href="index.html" aria-label="Ah Imobiliária, ir para o início">
+          <img class="marca__simbolo" src="marca.svg" alt="" width="240" height="224" loading="lazy" decoding="async">
+          <span class="marca__texto">
+            <span class="marca__ah">Ah</span><span class="marca__resto">Imobiliária</span>
+          </span>
+        </a>
+        <p class="rodape__sobre">
+          Compra, venda e locação de imóveis em Fortaleza e região
+          metropolitana, com atendimento direto do corretor responsável.
+        </p>
+      </div>
+
+      <div>
+        <h3>Imóveis</h3>
+        <ul>
+          <li><a href="#catalogo" data-finalidade="venda">Comprar</a></li>
+          <li><a href="#catalogo" data-finalidade="aluguel">Alugar</a></li>
+          <li><a href="#cobertura">Bairros atendidos</a></li>
+          <li><a href="admin.html">Área do corretor</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Contato</h3>
+        <ul>
+          <li><a id="rodape-zap" href="#contato">WhatsApp</a></li>
+          <li><a id="rodape-insta" href="#contato">Instagram</a></li>
+          <li><span id="rodape-email"></span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rodape__fim">
+      <span id="rodape-creci"></span>
+      <span>&copy; <span id="ano"></span> Ah Imobiliária. Todos os direitos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<a class="zap" id="zap-flutuante" href="#contato" aria-label="Falar com corretor no WhatsApp">
+  <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>
+</a>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

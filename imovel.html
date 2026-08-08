@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Imóvel | Ah Imobiliária</title>
+<meta name="description" content="Detalhes do imóvel na Ah Imobiliária.">
+<!-- Tema unico claro: uma cor so, sem media. Ver css/tokens.css. -->
+<meta name="theme-color" content="#6e181b">
+<meta name="color-scheme" content="light">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/imovel.css">
+
+<script>
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.classList.add('motion-ok');
+  }
+</script>
+</head>
+<body>
+
+<div class="grao" aria-hidden="true"></div>
+
+<header class="cabecalho encolhido" id="cabecalho">
+  <div class="faixa-demo" id="faixa-demo" hidden>
+    Estes imóveis são de exemplo. Cadastre os de verdade na <a href="admin.html">Área do corretor</a>.
+  </div>
+  <div class="container cabecalho__linha">
+    <a class="marca" href="index.html" aria-label="Ah Imobiliária, ir para o início">
+      <img class="marca__simbolo" src="marca.svg" alt="" width="240" height="224" decoding="async">
+      <span class="marca__texto">
+        <span class="marca__ah">Ah</span><span class="marca__resto">Imobiliária</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="nav__link" href="index.html#catalogo">Imóveis</a>
+      <a class="nav__link" href="index.html#cobertura">A imobiliária</a>
+      <a class="nav__link" href="index.html#contato">Contato</a>
+    </nav>
+    <a class="btn cabecalho__acao" id="zap-topo" href="index.html#contato">
+      <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>Falar com corretor
+    </a>
+  </div>
+</header>
+
+<main class="container pagina-imovel" id="pagina">
+  <a class="voltar" href="index.html#catalogo">
+    <i class="ph ph-arrow-left" aria-hidden="true"></i>Voltar para o catálogo
+  </a>
+
+  <!-- Preenchido por js/imovel.js. Começa como esqueleto pra não haver
+       salto de layout quando o dado chega. -->
+  <div id="conteudo">
+    <div class="esqueleto" style="aspect-ratio:16/10;border-radius:var(--r-card)"></div>
+    <div class="imovel">
+      <div><div class="esqueleto" style="height:20rem"></div></div>
+      <div><div class="esqueleto" style="height:16rem"></div></div>
+    </div>
+  </div>
+</main>
+
+<footer class="rodape">
+  <div class="container">
+    <div class="rodape__fim">
+      <span id="rodape-creci"></span>
+      <span>&copy; <span id="ano"></span> Ah Imobiliária. Todos os direitos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<a class="zap" id="zap-flutuante" href="index.html#contato" aria-label="Falar com corretor no WhatsApp">
+  <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>
+</a>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script type="module" src="js/imovel.js"></script>
+</body>
+</html>

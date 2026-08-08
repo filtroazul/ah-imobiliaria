@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 224" role="img" aria-label="Ah Imobiliária">
+<title>Ah Imobiliária</title>
+<!-- ============================================================================
+     Redesenho vetorial da logo do Alejandro Hernandez.
+     Referência: IMG-20251121-WA0000.jpg, medida no pixel. Vinho #6e181b,
+     dourado #cfb771 (aqui em gradiente, pra render o metálico do original).
+
+     Geometria: círculo de centro (120, 112), raio externo 95. Tudo o mais é
+     medido a partir daí. As MESMAS coordenadas estão na abertura animada do
+     index.html — mexeu aqui, mexe lá.
+
+     ⚠️ O gradiente é userSpaceOnUse de propósito. Em objectBoundingBox, a haste
+     vertical da chave tem caixa de largura zero, o gradiente degenera e o traço
+     simplesmente não pinta. Já custou uma rodada de depuração.
+
+     O site tem TEMA ÚNICO CLARO (ver o cabeçalho de css/tokens.css). Havia
+     aqui uma media query de modo escuro clareando o vinho pra #cb4d52; foi
+     removida junto com o tema. O vinho aqui é sempre o da arte original.
+     ========================================================================= -->
+<defs>
+  <linearGradient id="ouro" gradientUnits="userSpaceOnUse" x1="24" y1="14" x2="206" y2="206">
+    <stop offset="0" stop-color="#a8873e"/>
+    <stop offset="0.3" stop-color="#e7d59d"/>
+    <stop offset="0.56" stop-color="#c3a45d"/>
+    <stop offset="1" stop-color="#8d7132"/>
+  </linearGradient>
+</defs>
+<style>
+  .ouro  { fill: none; stroke: url(#ouro); }
+  .ouroc { fill: url(#ouro); }
+  .vinho { fill: #6e181b; }
+  .vinhot{ fill: none; stroke: #6e181b; stroke-linecap: butt; }
+</style>
+
+<!-- Os dois anéis são círculos inteiros e ficam ATRÁS do telhado: é o telhado
+     que os corta, como no original. O interno abre embaixo pra chave passar. -->
+<circle class="ouro" cx="120" cy="112" r="95" stroke-width="2.6"/>
+<path class="ouro" stroke-width="6.2" stroke-linecap="round"
+      d="M101.9 197.2 A87.3 87.3 0 1 1 138.1 197.2"/>
+
+<!-- Monograma AH em traço grosso. O topo entra no telhado de propósito. -->
+<path class="vinhot" stroke-width="23" d="M75 166 L75 110 C75 78 95 66 120 66"/>
+<path class="vinhot" stroke-width="25" d="M120 50 L120 166"/>
+<path class="vinhot" stroke-width="23" d="M164 70 L164 166"/>
+<path class="vinhot" stroke-width="20" d="M63.5 114.5 L175.5 114.5"/>
+
+<!-- Telhado por cima do monograma: é ele que fecha o topo das letras. -->
+<path class="vinho" d="M120 31 L231 109 L120 57 L9 109 Z"/>
+<path class="ouro" stroke-width="2" stroke-linejoin="round" d="M25 99.6 L120 44 L215 99.6"/>
+
+<!-- Chave por último: haste fina em cima, anel, palhetão e ponta embaixo. -->
+<path class="ouro" stroke-width="5" d="M120 38 L120 131"/>
+<circle class="ouro" cx="120" cy="147" r="12" stroke-width="7.5"/>
+<path class="ouro" stroke-width="9" d="M120 163 L120 192"/>
+<path class="ouro" stroke-width="7" d="M120 178 L136 178"/>
+<path class="ouroc" d="M111 189 L129 189 L120 207 Z"/>
+</svg>
