@@ -57,6 +57,11 @@ function mostrar(qual) {
   $('#painel').hidden = qual !== 'painel';
   $('#forma').hidden = qual !== 'forma';
   $('#sair').hidden = !repo.naNuvem || !usuario;
+  // O recado de "salvo como rascunho" é de UMA troca de tela. Quem salva chama
+  // mostrar('painel') e SÓ DEPOIS escreve o recado, então limpar aqui não o
+  // apaga — só impede que ele fique pendurado na navegação seguinte.
+  const aviso = $('#painel-recado');
+  if (aviso) aviso.hidden = true;
   window.scrollTo({ top: 0 });
 }
 
@@ -362,6 +367,25 @@ async function salvar(e) {
     await carregarLista();
     await mostrarEspaco();
     mostrar('painel');
+
+    // Salvar em silêncio confundiu no primeiro cadastro real: o padrão da
+    // Situação é RASCUNHO, o imóvel não aparece no site, e nada dizia isso.
+    // Quem cadastra tem que sair daqui sabendo se publicou ou não.
+    const salvoComo = imovel.status || dados.status;
+    if (salvoComo === 'rascunho') {
+      recado(
+        $('#painel-recado'),
+        '<strong>Salvo como rascunho — ainda NÃO aparece no site.</strong> ' +
+          'Para publicar: <em>Editar</em> → seção <em>Publicação</em> → ' +
+          'Situação <em>Disponível</em> → Salvar.',
+        'aviso',
+      );
+    } else {
+      recado(
+        $('#painel-recado'),
+        `<strong>Publicado.</strong> Já está no ar como <em>${escapar(PILULA[salvoComo] || salvoComo)}</em>.`,
+      );
+    }
   } catch (erro) {
     recado(aviso, `Não consegui salvar: ${escapar(erro.message)}`, 'erro');
   } finally {

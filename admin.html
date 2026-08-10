@@ -81,6 +81,11 @@
       <button class="aba" id="aba-backup" role="tab" aria-selected="false">Backup</button>
     </div>
 
+    <!-- Recado depois de salvar. Existe porque salvar em silêncio confundiu no
+         primeiro cadastro real (10/08/2026): o imóvel nasce como RASCUNHO, não
+         aparece no site, e o painel não dizia nada sobre isso. -->
+    <div class="recado" id="painel-recado" hidden></div>
+
     <section id="vista-imoveis">
       <div class="lista" id="lista"></div>
     </section>
