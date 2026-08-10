@@ -19,8 +19,13 @@
 // ============================================================================
 
 export const CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  // Projeto "ah.imobiliaria", região sa-east-1 (São Paulo), criado em 10/08/2026.
+  // A chave abaixo é a PUBLISHABLE (formato novo do Supabase, substitui a antiga
+  // `anon`). Ela é pública por design e pode ficar aqui à vista — testado em
+  // 10/08: com ela na mão, um visitante lê o catálogo publicado e nada mais.
+  // A chave `sb_secret_...` NUNCA entra neste arquivo.
+  supabaseUrl: 'https://sbbdwruztgkhpkgpbrzl.supabase.co',
+  supabaseAnonKey: 'sb_publishable_y-Kenm09_JFxhdRkBmFIGw_SHtyeoiy',
 
   // Deixar em branco o que ainda não se sabe: o site esconde a linha sozinho.
   // Melhor faltar um dado do que exibir um endereço ou e-mail inventado.

@@ -7,8 +7,51 @@
 -- Ordem: extensões > tabelas > índices > triggers > RLS > storage > RPC > seed.
 -- ============================================================================
 
-create extension if not exists pgcrypto;
-create extension if not exists unaccent;
+-- No Supabase as extensões moram no schema `extensions`, que já está no
+-- search_path. Instalar sem o `with schema` joga no `public` e polui a API.
+create extension if not exists pgcrypto  with schema extensions;
+create extension if not exists unaccent  with schema extensions;
+
+-- ⚠️ `unaccent()` é STABLE, não IMMUTABLE — as DUAS assinaturas (conferido no
+-- Postgres 17.6 deste projeto). Coluna gerada só aceita expressão IMMUTABLE,
+-- então usá-la direto falha com "generation expression is not immutable" e
+-- derruba o schema inteiro. Este invólucro é o contorno canônico: ele só
+-- deixaria de ser verdade se alguém trocasse o dicionário do unaccent, o que
+-- não acontece num projeto como este.
+create or replace function public.sem_acento(txt text)
+returns text
+language sql
+immutable
+strict
+parallel safe
+as $$ select extensions.unaccent('extensions.unaccent'::regdictionary, txt) $$;
+
+-- Mesma história do `unaccent`, e esta pega quem não esperava: `array_to_string`
+-- TAMBÉM é STABLE (ela depende da função de saída do tipo do elemento).
+-- Por isso a expressão inteira da busca virou uma função só, declarada
+-- IMMUTABLE — é ela que a coluna gerada `imoveis.busca` chama.
+create or replace function public.texto_busca(
+  p_titulo      text,
+  p_bairro      text,
+  p_cidade      text,
+  p_descricao   text,
+  p_comodidades text[]
+) returns tsvector
+language sql
+immutable
+parallel safe
+as $$
+  select to_tsvector(
+    'portuguese',
+    public.sem_acento(
+      coalesce(p_titulo, '')    || ' ' ||
+      coalesce(p_bairro, '')    || ' ' ||
+      coalesce(p_cidade, '')    || ' ' ||
+      coalesce(p_descricao, '') || ' ' ||
+      coalesce(array_to_string(p_comodidades, ' '), '')
+    )
+  )
+$$;
 
 
 -- ============================================================================
@@ -103,16 +146,7 @@ alter table public.imoveis
   drop column if exists busca;
 alter table public.imoveis
   add column busca tsvector generated always as (
-    to_tsvector(
-      'portuguese',
-      unaccent(
-        coalesce(titulo, '')    || ' ' ||
-        coalesce(bairro, '')    || ' ' ||
-        coalesce(cidade, '')    || ' ' ||
-        coalesce(descricao, '') || ' ' ||
-        array_to_string(comodidades, ' ')
-      )
-    )
+    public.texto_busca(titulo, bairro, cidade, descricao, comodidades)
   ) stored;
 
 create index if not exists imoveis_busca_idx on public.imoveis using gin (busca);
@@ -260,9 +294,14 @@ create trigger leads_touch before update on public.leads
 -- Se você errar aqui, qualquer visitante deleta a carteira inteira.
 -- ============================================================================
 
+-- ⚠️ TODA tabela do public precisa estar nesta lista. Policy escrita numa
+-- tabela SEM RLS ligado é simplesmente ignorada pelo Postgres — não dá erro,
+-- não avisa, e a tabela fica aberta. Foi o que aconteceu com `videos`, que
+-- tinha as duas policies e ficou de fora daqui.
 alter table public.corretores enable row level security;
 alter table public.imoveis    enable row level security;
 alter table public.fotos      enable row level security;
+alter table public.videos     enable row level security;
 alter table public.leads      enable row level security;
 alter table public.visitas    enable row level security;
 
@@ -520,7 +559,10 @@ as $$
   where i.status in ('disponivel', 'reservado')
     and (p_finalidade  is null or i.finalidade = p_finalidade)
     and (p_tipo        is null or i.tipo       = p_tipo)
-    and (p_bairro      is null or unaccent(i.bairro) ilike '%' || unaccent(p_bairro) || '%')
+    -- public.sem_acento e não unaccent(): esta função roda com
+    -- `set search_path = public`, então o schema `extensions` (onde o unaccent
+    -- mora) fica fora do caminho aqui dentro.
+    and (p_bairro      is null or public.sem_acento(i.bairro) ilike '%' || public.sem_acento(p_bairro) || '%')
     and (p_preco_max   is null or i.preco     <= p_preco_max)
     and (p_quartos_min is null or i.quartos   >= p_quartos_min)
   order by i.destaque desc, i.preco asc

@@ -21,15 +21,24 @@ import * as local from './local.js';
 
 const CDN_SUPABASE = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-let _cliente = null;
+// ⚠️ Guarda a PROMESSA, não o cliente pronto. Guardando o valor, três chamadas
+// simultâneas (catálogo + destaques + painel, que é o caso real na abertura da
+// página) passam todas pelo `if (_cliente)` enquanto ele ainda é null e criam
+// três clientes. O sintoma no console é "Multiple GoTrueClient instances
+// detected in the same browser context", e o risco não é cosmético: cada
+// instância de auth mexe no mesmo token no localStorage e a sessão do corretor
+// pode se perder no meio de um cadastro.
+let _clientePromessa = null;
 
 /** Cliente Supabase, carregado sob demanda. Null quando não configurado. */
-export async function cliente() {
-  if (!configurado()) return null;
-  if (_cliente) return _cliente;
-  const { createClient } = await import(CDN_SUPABASE);
-  _cliente = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
-  return _cliente;
+export function cliente() {
+  if (!configurado()) return Promise.resolve(null);
+  if (!_clientePromessa) {
+    _clientePromessa = import(CDN_SUPABASE).then(({ createClient }) =>
+      createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey),
+    );
+  }
+  return _clientePromessa;
 }
 
 export const MODO = { NUVEM: 'nuvem', LOCAL: 'local', EXEMPLO: 'exemplo' };
