@@ -425,7 +425,14 @@
           <li><a href="#catalogo" data-finalidade="venda">Comprar</a></li>
           <li><a href="#catalogo" data-finalidade="aluguel">Alugar</a></li>
           <li><a href="#cobertura">Bairros atendidos</a></li>
-          <li><a href="admin.html">Área do corretor</a></li>
+          <!-- O link "Área do corretor" saiu daqui de propósito (10/08/2026):
+               o painel não se anuncia pro visitante. Ele continua acessível
+               em /admin.html, e quem precisa dele sabe o endereço.
+               ⚠️ Isso NÃO é o que protege a carteira — o admin.html é HTML
+               público num repo público e sempre vai ser legível. Quem protege
+               é a senha do corretor + o RLS (testado em 10/08: um estranho
+               logado não escreve nada e nem consegue se promover a corretor).
+               Não reintroduzir este link "pra facilitar". -->
         </ul>
       </div>
 
