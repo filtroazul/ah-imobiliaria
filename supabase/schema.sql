@@ -562,7 +562,16 @@ as $$
     -- public.sem_acento e não unaccent(): esta função roda com
     -- `set search_path = public`, então o schema `extensions` (onde o unaccent
     -- mora) fica fora do caminho aqui dentro.
-    and (p_bairro      is null or public.sem_acento(i.bairro) ilike '%' || public.sem_acento(p_bairro) || '%')
+    -- ⚠️ Casa com BAIRRO **ou** CIDADE de propósito. O agente recebe texto
+    -- livre ("tem apartamento em Fortaleza?") e não tem como saber se o que
+    -- veio é bairro ou cidade — na prática ele manda a cidade em p_bairro
+    -- com frequência. Comparando só com i.bairro, a busca voltava vazia e o
+    -- bot respondia "não temos" para um cliente que tinha imóvel disponível.
+    -- Visto no app publicado em 11/08/2026. Lead perdido é pior que
+    -- resultado amplo demais: aqui o filtro é generoso por escolha.
+    and (p_bairro      is null
+         or public.sem_acento(i.bairro) ilike '%' || public.sem_acento(p_bairro) || '%'
+         or public.sem_acento(i.cidade) ilike '%' || public.sem_acento(p_bairro) || '%')
     and (p_preco_max   is null or i.preco     <= p_preco_max)
     and (p_quartos_min is null or i.quartos   >= p_quartos_min)
   order by i.destaque desc, i.preco asc
