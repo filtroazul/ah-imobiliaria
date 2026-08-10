@@ -1,0 +1,67 @@
+name: keep-supabase-awake
+
+# O projeto free do Supabase PAUSA depois de 7 dias sem nenhuma requisição.
+# Enquanto o site não tiver visita de verdade todo dia, isso acontece: o
+# catálogo some, o painel não loga e o agente diz "catálogo indisponível".
+#
+# ⚠️ DIFERENÇA IMPORTANTE PRO KEEP-ALIVE DO STREAMLIT (que vive no repo
+# `filtroazul/agentes` e precisa de um navegador headless):
+#
+#   - O Streamlit conta sessão de WEBSOCKET, então curl não serve pra nada.
+#   - O Supabase conta REQUISIÇÃO no banco, então curl serve — a leitura
+#     abaixo atravessa o PostgREST e chega no Postgres de verdade.
+#     Conferido em 10/08/2026: HTTP 200, zero redirects, devolve dado.
+#
+#   - E o mais importante: o Streamlit ACORDA sozinho quando alguém abre o
+#     app. O Supabase NÃO. Projeto pausado só volta na mão, em
+#     supabase.com > projeto > Restore. Ou seja: este workflow evita a
+#     pausa, mas não desfaz. Por isso ele FALHA DE PROPÓSITO quando algo dá
+#     errado — o e-mail de "workflow failed" do GitHub é o único aviso que
+#     existe antes do site cair.
+#
+# ⚠️ O GitHub DESLIGA workflow agendado em repo sem commit há 60 dias. Se o
+# projeto pausar do nada, conferir isso antes de culpar o script.
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # uma vez por dia; a pausa só vem com 7 dias parados
+  workflow_dispatch: {}     # rodar na mão: aba Actions -> Run workflow
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ler o catálogo (mantém o Postgres ativo)
+        env:
+          # Esta é a chave PUBLISHABLE. Ela é pública por design e já está à
+          # vista em js/config.js, neste mesmo repo público — não é segredo e
+          # não precisa virar GitHub Secret. A `sb_secret_` nunca entra aqui.
+          URL: https://sbbdwruztgkhpkgpbrzl.supabase.co
+          KEY: sb_publishable_y-Kenm09_JFxhdRkBmFIGw_SHtyeoiy
+        run: |
+          set -euo pipefail
+
+          resposta=$(curl -sS -m 30 -w '\n%{http_code}' \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+            "$URL/rest/v1/catalogo?select=codigo&limit=1")
+
+          codigo=$(printf '%s' "$resposta" | tail -n1)
+          corpo=$(printf  '%s' "$resposta" | sed '$d')
+
+          echo "HTTP $codigo"
+          echo "corpo: $corpo"
+
+          if [ "$codigo" != "200" ]; then
+            echo "::error::O Supabase respondeu $codigo em vez de 200."
+            echo "::error::401/403 = a chave publishable foi rotacionada; troque-a aqui e em js/config.js."
+            echo "::error::5xx ou timeout = o projeto pode JÁ ter pausado. Restaure em supabase.com (não volta sozinho)."
+            exit 1
+          fi
+
+          # 200 com corpo vazio não prova que o banco respondeu: um proxy no
+          # meio também devolveria 200. O que prova é vir JSON do PostgREST.
+          case "$corpo" in
+            \[*) echo "OK: o Postgres respondeu." ;;
+            *)   echo "::error::HTTP 200 mas o corpo não é JSON do PostgREST: $corpo"; exit 1 ;;
+          esac
