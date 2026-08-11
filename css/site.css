@@ -251,10 +251,38 @@ p { text-wrap: pretty; }
 
 .menu-btn { display: none; background: none; border: 0; padding: 0.5rem; }
 
+/* Atalho do corretor. Nasce escondido; quem revela é o js/painel.js, e só
+   quando acha sessão do Supabase neste aparelho. Repare que ele NÃO está dentro
+   do .nav nem usa .cabecalho__acao: os dois somem no celular atrás do menu
+   sanduíche, e o objetivo aqui é justamente um toque só, sem abrir menu. */
+.painel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--dourado);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  color: var(--vermelho);
+  white-space: nowrap;
+  transition: background var(--rapido), color var(--rapido), border-color var(--rapido);
+}
+.painel-link:hover {
+  background: var(--vermelho);
+  border-color: var(--vermelho);
+  color: #fff;
+}
+/* Sem isto o `hidden` do HTML não vale nada: o display acima ganha dele. */
+.painel-link[hidden] { display: none; }
+
 @media (max-width: 900px) {
   .nav { display: none; }
   .cabecalho__acao { display: none; }
   .menu-btn { display: block; }
+
+  /* No celular ele divide a barra com o menu sanduíche: encolhe, mas continua
+     com o rótulo — ícone sozinho ninguém sabe o que é. */
+  .painel-link { margin-left: auto; margin-right: 0.35rem; padding: 0.4rem 0.75rem; }
 
   .nav--aberta {
     display: flex;

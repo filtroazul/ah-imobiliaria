@@ -51,6 +51,13 @@
     <a class="btn cabecalho__acao" id="zap-topo" href="index.html#contato">
       <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>Falar com corretor
     </a>
+
+    <!-- Mesmo atalho do index: escondido até o js/painel.js achar sessão. Está
+         aqui também porque o corretor costuma abrir a página de um imóvel pra
+         conferir como ficou e querer corrigir na hora. -->
+    <a class="painel-link" id="painel-link" href="admin.html" hidden>
+      <i class="ph ph-squares-four ico" aria-hidden="true"></i>Painel
+    </a>
   </div>
 </header>
 
@@ -86,5 +93,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script type="module" src="js/imovel.js"></script>
+<script type="module" src="js/painel.js"></script>
 </body>
 </html>

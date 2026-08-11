@@ -6,6 +6,57 @@
 
 ---
 
+## 🆕 10/AGO — O BACKEND ESTÁ NO AR (§3 e §5 abaixo estão desatualizados)
+
+O Supabase foi criado e **tudo o que a §5 listava como "nunca rodou" rodou**.
+
+| | |
+|---|---|
+| Projeto | `ah.imobiliaria`, ref `sbbdwruztgkhpkgpbrzl`, **sa-east-1 (São Paulo)** |
+| Corretor | `ah.imobiliarias@gmail.com`, já em `public.corretores` com `admin=true` |
+| Modo do site | **nuvem** — `js/config.js` preenchido, sem faixa de demonstração |
+
+**Testado de verdade, contra o projeto real:**
+
+- **14 ataques pela API como visitante anônimo** (criar/editar/apagar imóvel,
+  criar/apagar vídeo, apagar foto, ler leads e visitas, ler rascunho): todos
+  barrados, e conferido **no banco** que preço, fotos e vídeos ficaram
+  intactos — `[]` numa resposta de DELETE não é prova, tem que ir olhar.
+- **O corretor logado faz as 6 operações** e enxerga o rascunho.
+- **Storage**: anônimo não sobe nem apaga; corretor sobe e apaga; leitura
+  pública funciona.
+- **Painel**: login com e-mail e senha, lista os imóveis, mostra rascunho.
+- **Agente** conversando com o catálogo real, incluindo busca por bairro com
+  acento e caixa trocados (`Aldeóta`, `ALDEOTA`).
+
+**Três bugs só apareceram quando o schema encostou num banco de verdade:**
+
+1. `public.videos` tinha as duas policies mas **nunca teve RLS ligado**.
+   Policy sem RLS é ignorada em silêncio: qualquer visitante inseria e
+   apagava vídeo. Corrigido, e o `Enable automatic RLS` do projeto ficou
+   ligado como rede de segurança.
+2. A coluna gerada `imoveis.busca` **não podia existir**: `unaccent()` e
+   `array_to_string()` são STABLE, não IMMUTABLE, e coluna gerada exige
+   IMMUTABLE. O schema inteiro falhava. A expressão virou
+   `public.texto_busca()`, declarada immutable.
+3. `dados.js` guardava o cliente pronto em vez da promessa → várias
+   instâncias de auth disputando o mesmo token ("Multiple GoTrueClient
+   instances"). A sessão do corretor podia cair no meio de um cadastro.
+
+**O catálogo está VAZIO de propósito** — os imóveis que usei pra testar foram
+apagados. O primeiro cadastro real é pelo painel.
+
+### O que ainda depende de você
+
+1. **Secrets do Streamlit Cloud**: sem `SUPABASE_URL` e `SUPABASE_ANON_KEY` lá,
+   o agente no ar responde "catálogo indisponível". Local já está configurado.
+2. **Ligar o GitHub Pages** (continua pendente desde 08/ago).
+3. **Pausa por inatividade**: projeto free do Supabase pausa depois de **7 dias
+   sem request**. Enquanto o site não tiver visita de verdade, isso vai
+   acontecer.
+
+---
+
 ## 1. Como rodar agora
 
 ```bash

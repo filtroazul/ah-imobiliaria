@@ -11,6 +11,19 @@
 
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
+<!-- Instala o PAINEL na tela de início do celular, não o site. Por isso o
+     manifest é declarado só aqui: o `start_url` abre direto no admin.html, em
+     tela cheia e sem barra de endereço. O index.html não linka isto de
+     propósito — visitante não tem o que instalar.
+     Sem service worker de propósito: o Chrome então oferece "Adicionar à tela
+     inicial" pelo menu em vez do banner automático, e isso basta. Um SW aqui
+     serviria só pra ganhar o banner, e traria risco de cache velho num painel
+     que precisa mostrar o que acabou de ser salvo. -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icone-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Painel AH">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
