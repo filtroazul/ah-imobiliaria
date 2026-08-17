@@ -218,6 +218,16 @@ function ligarGaleria(fotos) {
 
 /* ----------------------------------------------------------------- mapa --- */
 
+function iconeDoPino() {
+  return L.divIcon({
+    className: 'pino-localizacao',
+    html: '<span class="pino-localizacao__marca"><i class="ph ph-house-line" aria-hidden="true"></i></span>',
+    iconSize: [40, 46],
+    iconAnchor: [20, 44],
+    popupAnchor: [0, -42],
+  });
+}
+
 function montarMapa(imovel) {
   const caixa = $('#mapa');
   if (!caixa) return;
@@ -229,12 +239,21 @@ function montarMapa(imovel) {
   }
 
   const temPonto = imovel.lat != null && imovel.lng != null;
-  const centro = temPonto ? [imovel.lat, imovel.lng] : CONFIG.mapa.centro;
+  if (!temPonto) {
+    // Um mapa centrado genericamente em Fortaleza parecia uma localização
+    // válida, mesmo sem coordenadas no cadastro. É mais honesto e mais claro
+    // dizer que o ponto ainda não foi informado.
+    caixa.classList.add('mapa--sem-coordenada');
+    caixa.innerHTML = '<p>A localização no mapa ainda não foi informada. Fale com o corretor para confirmar a região.</p>';
+    return;
+  }
+
+  const centro = [Number(imovel.lat), Number(imovel.lng)];
 
   const mapa = L.map(caixa, {
     scrollWheelZoom: false, // rolar a página não pode virar zoom sem querer
     zoomControl: true,
-  }).setView(centro, temPonto ? 15 : CONFIG.mapa.zoom);
+  }).setView(centro, 15);
 
   // OpenStreetMap: sem chave de API, sem cartão de crédito, sem cota.
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -242,10 +261,9 @@ function montarMapa(imovel) {
     attribution: '&copy; colaboradores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(mapa);
 
-  if (!temPonto) return;
-
   if (imovel.mostrar_endereco) {
-    L.marker(centro).addTo(mapa).bindPopup(escapar(imovel.titulo));
+    L.marker(centro, { icon: iconeDoPino() })
+      .addTo(mapa).bindPopup(escapar(imovel.titulo));
   } else {
     // Sem autorização pra expor o endereço, o mapa mostra um raio em vez de
     // um pino. O proprietário não recebe visita de gente sem corretor.

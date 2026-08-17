@@ -284,11 +284,9 @@ folga do próprio navegador).
 2. ~~**Nome na marca.**~~ Resolvido em 08/ago: *Alejandro Hernandez · Corretor
    de Imóveis · CRECI-CE 28277* agora assina a abertura, e o CRECI já estava no
    rodapé. Se ele quiser o nome também no cabeçalho, é decisão dele.
-3. **As fotos do hero são placeholder do picsum.photos** e saem aleatórias
-   (rena, abacaxi). As do catálogo somem sozinhas no primeiro cadastro, mas as
-   **duas do hero e a de fundo da seção "cobertura" estão chumbadas no HTML** e
-   precisam ser trocadas à mão por foto real da carteira. É a coisa mais feia
-   do site hoje.
+3. **A foto de fundo da seção "cobertura" ainda é um placeholder do
+   picsum.photos.** As duas fotos do hero agora vêm automaticamente das capas
+   dos imóveis publicados e marcados como destaque no painel.
 4. **Cidade e UF padrão** estão em Fortaleza/CE. Conferir se é a praça dele.
 5. Textos de depoimento são inventados. Trocar por depoimento real antes de
    mostrar pra qualquer cliente.

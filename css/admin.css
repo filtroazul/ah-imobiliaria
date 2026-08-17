@@ -352,9 +352,71 @@
   border-radius: var(--r-card);
   border: 1px solid var(--linha);
   overflow: hidden;
+  background: var(--bg-fundo);
 }
 .busca-endereco { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .busca-endereco input { flex: 1 1 16rem; }
+
+.endereco-sugestoes {
+  display: grid;
+  gap: 0;
+  margin-top: 0.65rem;
+  border: 1px solid var(--linha-forte);
+  border-radius: var(--r-campo);
+  background: var(--bg-alto);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+}
+.endereco-sugestao {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--linha);
+  color: var(--tinta);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.endereco-sugestao:hover,
+.endereco-sugestao:focus-visible {
+  color: var(--vermelho);
+  background: var(--vermelho-fraco);
+  outline: none;
+}
+.endereco-sugestao .ph { margin-top: 0.12rem; color: var(--dourado-texto); }
+.endereco-sugestoes__vazio,
+.endereco-sugestoes__credito {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  color: var(--tinta-fraca);
+  font-size: 0.84rem;
+}
+.endereco-sugestoes__credito {
+  padding-block: 0.55rem;
+  background: var(--bg-fundo);
+  text-align: right;
+}
+
+.ponto-localizacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+  margin-block: 0.8rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-campo);
+  color: var(--tinta-media);
+  background: var(--bg-fundo);
+  font-size: 0.86rem;
+}
 
 /* --------------------------------------------------------------- aviso ---- */
 
@@ -383,4 +445,6 @@
 @media (max-width: 720px) {
   .linha { grid-template-columns: 3.5rem minmax(0, 1fr); }
   .linha__estado, .linha__acoes { grid-column: 1 / -1; }
+  .busca-endereco .btn { width: 100%; }
+  .ponto-localizacao { align-items: flex-start; flex-direction: column; }
 }

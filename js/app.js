@@ -126,6 +126,89 @@ function ligarBusca() {
 
 /* ----------------------------------------------------------- destaques ---- */
 
+function ocultarMidiaDoHero() {
+  const midia = $('#hero-midia');
+  if (midia) midia.hidden = true;
+  $('.hero__grade')?.classList.add('hero__grade--sem-midia');
+}
+
+/**
+ * Troca os antigos placeholders aleatórios pelas capas dos imóveis que o
+ * corretor marcou como destaque. Um destaque sem foto não ocupa um dos dois
+ * espaços; com uma única capa, ela cresce e vira a composição inteira.
+ */
+async function aplicarFotosDoHero(itens) {
+  const midia = $('#hero-midia');
+  if (!midia) return;
+
+  const vistos = new Set();
+  const comFoto = itens.filter((imovel) => {
+    if (!imovel.capa || vistos.has(imovel.capa)) return false;
+    vistos.add(imovel.capa);
+    return true;
+  }).slice(0, 2);
+
+  if (!comFoto.length) {
+    ocultarMidiaDoHero();
+    return;
+  }
+
+  const slots = [
+    ['#hero-foto-principal', '#hero-img-principal'],
+    ['#hero-foto-secundaria', '#hero-img-secundaria'],
+  ];
+
+  const carregamentos = slots.map(([seletorFigura, seletorImagem], indice) => {
+    const figura = $(seletorFigura);
+    const imagem = $(seletorImagem);
+    const imovel = comFoto[indice];
+
+    if (!figura || !imagem || !imovel) {
+      if (figura) figura.hidden = true;
+      return Promise.resolve(false);
+    }
+
+    figura.hidden = false;
+    imagem.alt = `Foto de ${imovel.titulo}`;
+
+    return new Promise((resolve) => {
+      imagem.addEventListener('load', () => resolve(true), { once: true });
+      imagem.addEventListener('error', () => {
+        figura.hidden = true;
+        resolve(false);
+      }, { once: true });
+      imagem.src = imovel.capa;
+    });
+  });
+
+  const carregadas = await Promise.all(carregamentos);
+  if (!carregadas.some(Boolean)) {
+    ocultarMidiaDoHero();
+    return;
+  }
+
+  // Se a primeira capa estiver quebrada e a segunda carregar, promove a
+  // segunda para o quadro grande em vez de deixar apenas o cartão pequeno.
+  if (!carregadas[0] && carregadas[1]) {
+    const principal = $('#hero-img-principal');
+    const secundaria = $('#hero-img-secundaria');
+    const figuraPrincipal = $('#hero-foto-principal');
+    const figuraSecundaria = $('#hero-foto-secundaria');
+    principal.src = secundaria.src;
+    principal.alt = secundaria.alt;
+    figuraPrincipal.hidden = false;
+    figuraSecundaria.hidden = true;
+    carregadas[0] = true;
+    carregadas[1] = false;
+  }
+
+  midia.hidden = false;
+  midia.classList.remove('hero__midia--carregando');
+  midia.classList.toggle('hero__midia--uma-foto', !carregadas[1]);
+  midia.setAttribute('aria-busy', 'false');
+  recalcular();
+}
+
 async function carregarDestaques() {
   const alvo = $('#destaques');
   if (!alvo) return;
@@ -135,6 +218,7 @@ async function carregarDestaques() {
     const itens = await listarDestaques(3);
 
     if (!itens.length) {
+      ocultarMidiaDoHero();
       alvo.innerHTML = aviso({
         titulo: 'Nenhum imóvel em destaque ainda',
         texto: 'Marque um imóvel como destaque no painel do corretor para ele aparecer aqui.',
@@ -146,7 +230,9 @@ async function carregarDestaques() {
     alvo.innerHTML = itens
       .map((im, i) => cardImovel(im, { alto: i === 0, prioridade: i === 0 }))
       .join('');
+    await aplicarFotosDoHero(itens);
   } catch (erro) {
+    ocultarMidiaDoHero();
     alvo.innerHTML = aviso({
       icone: 'ph-warning-circle',
       titulo: 'Não consegui carregar os destaques',

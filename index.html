@@ -185,18 +185,27 @@
         </div>
       </div>
 
-      <!-- TODO: trocar as duas fotos abaixo por foto real de imóvel da carteira. -->
-      <div class="hero__midia">
+      <!-- As fotos nascem vazias e são preenchidas por app.js com as capas
+           dos imóveis publicados que o corretor marcou como destaque. -->
+      <div class="hero__midia hero__midia--carregando" id="hero-midia" aria-busy="true">
         <div class="hero__fio" aria-hidden="true"></div>
-        <figure class="hero__foto hero__foto--principal" data-parallax="-60">
-          <img src="https://picsum.photos/seed/ah-hero-sala/1100/1375" width="1100" height="1375"
-               alt="Sala ampla e iluminada de um apartamento da carteira"
-               fetchpriority="high" decoding="async">
-        </figure>
-        <figure class="hero__foto hero__foto--secundaria" data-parallax="45">
-          <img src="https://picsum.photos/seed/ah-hero-fachada/620/825" width="620" height="825"
-               alt="Fachada de uma casa em condomínio fechado" loading="lazy" decoding="async">
-        </figure>
+        <div class="hero__camada hero__camada--principal" data-parallax="-60">
+          <figure class="hero__foto hero__foto--principal" id="hero-foto-principal">
+            <img id="hero-img-principal" width="1100" height="1375" alt=""
+                 fetchpriority="high" decoding="async">
+          </figure>
+        </div>
+        <div class="hero__camada hero__camada--secundaria" data-parallax="45">
+          <figure class="hero__foto hero__foto--secundaria" id="hero-foto-secundaria">
+            <img id="hero-img-secundaria" width="620" height="825" alt=""
+                 loading="lazy" decoding="async">
+          </figure>
+        </div>
+        <p class="hero__gesto" aria-hidden="true">
+          <i class="ph ph-arrows-out-line-horizontal"></i>
+          <span class="hero__gesto-pc">Mova para explorar</span>
+          <span class="hero__gesto-mobile">Deslize para explorar</span>
+        </p>
       </div>
     </div>
   </section>

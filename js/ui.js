@@ -147,16 +147,68 @@ export function lerLinkDeVideo(bruto) {
   return { plataforma: 'outro', embutir: null, capa: null };
 }
 
-/** "R$ 450.000" digitado vira 450000. Aceita o que a pessoa quiser digitar. */
+/**
+ * Lê valores em notação brasileira ou internacional.
+ *
+ * O separador com três algarismos à direita é tratado como milhar; com
+ * uma ou duas casas, como decimal. Quando ponto e vírgula aparecem juntos, o
+ * último deles é o decimal. Isso cobre tanto "495.000,00" quanto
+ * "495,000.00" sem transformar R$ 495 mil em R$ 49,5 milhões.
+ */
 export function lerNumero(texto) {
-  const so = String(texto ?? '').replace(/[^\d]/g, '');
-  return so ? Number(so) : null;
+  if (typeof texto === 'number') return Number.isFinite(texto) ? texto : null;
+
+  const original = String(texto ?? '').trim().toLocaleLowerCase('pt-BR');
+  const escala = /\bmilh(?:ão|ao|ões|oes)\b/.test(original)
+    ? 1_000_000
+    : /\bmil\b/.test(original) ? 1_000 : 1;
+  let valor = original.replace(/[^\d,.-]/g, '');
+  if (!valor) return null;
+
+  const pontos = valor.match(/\./g)?.length ?? 0;
+  const virgulas = valor.match(/,/g)?.length ?? 0;
+
+  if (pontos && virgulas) {
+    const decimal = valor.lastIndexOf(',') > valor.lastIndexOf('.') ? ',' : '.';
+    const milhar = decimal === ',' ? '.' : ',';
+    valor = valor.replaceAll(milhar, '');
+
+    // Só a última ocorrência do separador é decimal; qualquer anterior
+    // é agrupamento digitado de forma irregular e pode ser descartado.
+    const partes = valor.split(decimal);
+    const casas = partes.pop();
+    valor = `${partes.join('')}.${casas}`;
+  } else {
+    const separador = virgulas ? ',' : pontos ? '.' : null;
+    if (separador) {
+      const partes = valor.split(separador);
+      const casas = partes.at(-1).length;
+      const repetido = partes.length > 2;
+
+      if (!repetido && (casas === 1 || casas === 2)) {
+        valor = `${partes[0]}.${partes[1]}`;
+      } else if (repetido && (casas === 1 || casas === 2)) {
+        valor = `${partes.slice(0, -1).join('')}.${partes.at(-1)}`;
+      } else {
+        // "495.000", "495,000" e "1.250.000" são milhares.
+        valor = partes.join('');
+      }
+    }
+  }
+
+  const numero = Number(valor) * escala;
+  return Number.isFinite(numero) ? numero : null;
 }
 
-/** Máscara leve de moeda enquanto a pessoa digita no filtro de preço. */
+/**
+ * Formata ao sair do campo. Formatar a cada tecla muda a posição do cursor
+ * e fazia "495000" atravessar estados como "4.9500", alterando o valor.
+ */
 export function mascararMoeda(input) {
-  input.addEventListener('input', () => {
+  input.addEventListener('blur', () => {
     const n = lerNumero(input.value);
-    input.value = n == null ? '' : n.toLocaleString('pt-BR');
+    input.value = n == null ? '' : n.toLocaleString('pt-BR', {
+      maximumFractionDigits: 2,
+    });
   });
 }

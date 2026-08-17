@@ -8,6 +8,7 @@
 //   cabeçalho encolhe  -> feedback de estado (você saiu do topo)
 //   barra de progresso -> orientação, mostra que a página continua abaixo
 //   parallax do hero   -> profundidade, separa as duas fotos em camadas
+//   gesto nas fotos    -> abre os dois destaques para enxergar melhor cada um
 //   entrada do hero    -> hierarquia, o olho lê título, texto e botão nessa ordem
 //   revelação ao rolar -> sequência, o conteúdo chega junto com a leitura
 //   cobertura presa    -> narrativa, segura a atenção enquanto conta a área de atuação
@@ -48,6 +49,7 @@ export function iniciarMovimento() {
   barraDeProgresso(gsap);
   entradaDoHero(gsap, atraso);
   parallax(gsap);
+  fotosInterativasDoHero();
   revelarSecoes(gsap, ScrollTrigger);
   coberturaPresa(gsap);
   linhaDoPercurso(gsap, ScrollTrigger);
@@ -114,7 +116,7 @@ function entradaDoHero(gsap, atraso) {
     });
   }
 
-  gsap.from('.hero__foto', {
+  gsap.from('.hero__camada', {
     opacity: 0,
     scale: 1.04,
     y: 30,
@@ -133,6 +135,112 @@ function entradaDoHero(gsap, atraso) {
     ease: 'power3.out',
     delay: atraso + 0.55,
   });
+}
+
+/**
+ * No mouse, a posição do ponteiro adiciona profundidade enquanto os dois
+ * cartões se afastam. No toque, o deslocamento horizontal abre a composição;
+ * touch-action: pan-y mantém a rolagem vertical nativa do celular.
+ */
+function fotosInterativasDoHero() {
+  const midia = document.querySelector('#hero-midia');
+  if (!midia) return;
+
+  let toque = null;
+  let quadro = 0;
+  let proximo = { abertura: 0, x: 0, y: 0 };
+  let retorno = 0;
+
+  const limitar = (valor, min, max) => Math.max(min, Math.min(max, valor));
+  const px = (valor) => `${valor.toFixed(2)}px`;
+  const grau = (valor) => `${valor.toFixed(2)}deg`;
+
+  const desenhar = () => {
+    quadro = 0;
+    const { abertura, x, y } = proximo;
+    const compacto = window.matchMedia('(max-width: 900px)').matches;
+    // No celular há só a margem lateral da tela; o scale já abre bastante
+    // os cartões, então a translação fica contida para não cortar a foto.
+    const distancia = compacto ? 0.28 : 1;
+
+    midia.style.setProperty('--hero-principal-x', px((-22 * abertura - x * 7) * distancia));
+    midia.style.setProperty('--hero-principal-y', px((-8 * abertura - y * 5) * distancia));
+    midia.style.setProperty('--hero-principal-giro', grau(-0.8 * abertura + x * 0.35));
+    midia.style.setProperty('--hero-principal-escala', String(1 + 0.025 * abertura));
+    midia.style.setProperty('--hero-secundaria-x', px((30 * abertura + x * 10) * distancia));
+    midia.style.setProperty('--hero-secundaria-y', px((11 * abertura + y * 7) * distancia));
+    midia.style.setProperty('--hero-secundaria-giro', grau(1.35 * abertura + x * 0.55));
+    midia.style.setProperty('--hero-secundaria-escala', String(1 + 0.075 * abertura));
+  };
+
+  const mover = (abertura, x = 0, y = 0) => {
+    proximo = {
+      abertura: limitar(abertura, 0, 1),
+      x: limitar(x, -1, 1),
+      y: limitar(y, -1, 1),
+    };
+    if (!quadro) quadro = requestAnimationFrame(desenhar);
+  };
+
+  const podeAbrir = () => !midia.hidden
+    && !midia.classList.contains('hero__midia--carregando')
+    && !midia.classList.contains('hero__midia--uma-foto');
+
+  const abrir = () => {
+    if (!podeAbrir()) return false;
+    window.clearTimeout(retorno);
+    midia.classList.add('hero__midia--interagindo', 'hero__midia--usada');
+    return true;
+  };
+
+  const fechar = () => {
+    toque = null;
+    midia.classList.remove('hero__midia--interagindo');
+    mover(0);
+  };
+
+  midia.addEventListener('pointerenter', (evento) => {
+    if (evento.pointerType === 'mouse' && abrir()) mover(1);
+  });
+
+  midia.addEventListener('pointermove', (evento) => {
+    if (!podeAbrir()) return;
+
+    if (evento.pointerType === 'touch') {
+      if (!toque) return;
+      const dx = evento.clientX - toque.x;
+      const dy = evento.clientY - toque.y;
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      if (!abrir()) return;
+      mover(0.3 + Math.abs(dx) / 72, dx / 90, dy / 110);
+      return;
+    }
+
+    const area = midia.getBoundingClientRect();
+    const x = ((evento.clientX - area.left) / area.width) * 2 - 1;
+    const y = ((evento.clientY - area.top) / area.height) * 2 - 1;
+    mover(1, x, y);
+  });
+
+  midia.addEventListener('pointerleave', (evento) => {
+    if (evento.pointerType === 'mouse') fechar();
+  });
+
+  midia.addEventListener('pointerdown', (evento) => {
+    if (evento.pointerType !== 'touch' || !podeAbrir()) return;
+    toque = { x: evento.clientX, y: evento.clientY };
+    try { midia.setPointerCapture?.(evento.pointerId); } catch { /* ponteiro já cancelado */ }
+    mover(0.18);
+  });
+
+  const terminarToque = () => {
+    if (!toque) return;
+    toque = null;
+    window.clearTimeout(retorno);
+    retorno = window.setTimeout(fechar, 420);
+  };
+  midia.addEventListener('pointerup', terminarToque);
+  midia.addEventListener('pointercancel', terminarToque);
 }
 
 /** O botão puxa o cursor de leve dentro de um raio. Escreve --puxa-x/--puxa-y,

@@ -13,7 +13,7 @@ import { CONFIG } from './config.js';
 import { moeda, TIPOS } from './dados.js';
 import * as repo from './repo.js';
 import * as local from './local.js';
-import { escapar, lerNumero, lerLinkDeVideo } from './ui.js';
+import { escapar, lerNumero, lerLinkDeVideo, mascararMoeda } from './ui.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -21,6 +21,14 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 let usuario = null;
 let mapa = null;
 let pino = null;
+let pontoSelecionado = null;
+let resultadosEndereco = [];
+let ultimaBuscaEndereco = 0;
+
+// A instância pública do Nominatim pede que consultas repetidas sejam
+// evitadas. Como este painel tem um único corretor, um cache em memória basta
+// para não perguntar duas vezes pelo mesmo texto durante a edição.
+const cacheEnderecos = new Map();
 
 /**
  * O imóvel aberto no formulário.
@@ -288,6 +296,7 @@ async function abrirFormulario(id = null) {
   $('#i-destaque').checked = dados.destaque;
   $('#i-mostrar-endereco').checked = dados.mostrar_endereco;
   $('#i-comodidades').value = (dados.comodidades ?? []).join(', ');
+  $('#i-busca-endereco').value = termoDoImovel(dados);
 
   edicao.fotos = dados.midias.filter((m) => m.tipo === 'foto');
   edicao.videos = dados.midias.filter((m) => m.tipo !== 'foto');
@@ -324,11 +333,12 @@ function coletar() {
     alvo[c] = $(idDe(c)).value.trim() || null;
   }
 
-  if (pino) {
-    const { lat, lng } = pino.getLatLng();
-    alvo.lat = lat;
-    alvo.lng = lng;
-  }
+  // Coordenada é dado do imóvel, não efeito visual do Leaflet. Manter uma
+  // cópia independente evita salvar o ponto antigo quando o mapa redesenha,
+  // o CDN falha ou o formulário é aberto enquanto o container ainda está
+  // ajustando o tamanho.
+  alvo.lat = pontoSelecionado?.lat ?? null;
+  alvo.lng = pontoSelecionado?.lng ?? null;
 
   return alvo;
 }
@@ -342,7 +352,7 @@ async function salvar(e) {
   const dados = coletar();
 
   if (!dados.titulo) return recado(aviso, 'O título é obrigatório.', 'erro');
-  if (!dados.preco) return recado(aviso, 'Informe o valor do imóvel.', 'erro');
+  if (!(dados.preco > 0)) return recado(aviso, 'Informe um valor válido para o imóvel.', 'erro');
   if (!dados.bairro || !dados.cidade) return recado(aviso, 'Bairro e cidade são obrigatórios.', 'erro');
 
   botao.disabled = true;
@@ -650,73 +660,282 @@ async function mostrarEspaco() {
 
 /* ================================================================= mapa == */
 
+function numeroCoordenada(valor) {
+  if (valor == null || valor === '') return null;
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+function coordenadasValidas(lat, lng) {
+  return lat != null && lng != null
+    && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
+function termoDoImovel(dados = {}) {
+  const rua = [dados.logradouro, dados.numero].filter(Boolean).join(', ');
+  return [rua || dados.titulo, dados.bairro, dados.cidade, dados.uf]
+    .filter(Boolean).join(', ');
+}
+
+function termoDosCampos() {
+  return termoDoImovel({
+    titulo: $('#i-titulo').value.trim(),
+    logradouro: $('#i-logradouro').value.trim(),
+    numero: $('#i-numero').value.trim(),
+    bairro: $('#i-bairro').value.trim(),
+    cidade: $('#i-cidade').value.trim(),
+    uf: $('#i-uf').value.trim(),
+  });
+}
+
+function atualizarPonto(semPino = 'Nenhum ponto marcado ainda.') {
+  const texto = $('#ponto-localizacao-texto');
+  const limpar = $('#limpar-localizacao');
+  if (!texto || !limpar) return;
+
+  if (!pontoSelecionado) {
+    texto.textContent = semPino;
+    limpar.hidden = true;
+    return;
+  }
+
+  const { lat, lng } = pontoSelecionado;
+  texto.textContent = `Ponto confirmado: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  limpar.hidden = false;
+}
+
+function iconeDoPino() {
+  return L.divIcon({
+    className: 'pino-localizacao',
+    html: '<span class="pino-localizacao__marca"><i class="ph ph-house-line" aria-hidden="true"></i></span>',
+    iconSize: [40, 46],
+    iconAnchor: [20, 44],
+    popupAnchor: [0, -42],
+  });
+}
+
+function ajustarTamanhoDoMapa() {
+  const ajustar = () => {
+    if (!mapa) return;
+    mapa.invalidateSize({ pan: false });
+    if (pontoSelecionado) mapa.setView(pontoSelecionado, 16, { animate: false });
+  };
+
+  // O formulário acabou de sair de display:none. Dois frames cobrem o layout
+  // normal; o segundo ajuste cobre fonte/CDN lento e a abertura no celular.
+  requestAnimationFrame(() => requestAnimationFrame(ajustar));
+  setTimeout(ajustar, 250);
+}
+
 function prepararMapa(lat, lng) {
   const caixa = $('#mapa-admin');
+  const latNumero = numeroCoordenada(lat);
+  const lngNumero = numeroCoordenada(lng);
+  pontoSelecionado = coordenadasValidas(latNumero, lngNumero)
+    ? { lat: latNumero, lng: lngNumero }
+    : null;
+  atualizarPonto();
+
   if (!window.L || !caixa) return;
 
-  const centro = lat != null && lng != null ? [lat, lng] : CONFIG.mapa.centro;
+  const centro = pontoSelecionado ?? CONFIG.mapa.centro;
 
   if (!mapa) {
-    mapa = L.map(caixa).setView(centro, lat != null ? 16 : CONFIG.mapa.zoom);
+    mapa = L.map(caixa).setView(centro, pontoSelecionado ? 16 : CONFIG.mapa.zoom);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; colaboradores do OpenStreetMap',
     }).addTo(mapa);
-    mapa.on('click', (e) => marcar(e.latlng.lat, e.latlng.lng, false));
+    mapa.on('click', (e) => marcar(e.latlng.lat, e.latlng.lng, {
+      mover: false,
+      origem: 'Ponto escolhido diretamente no mapa.',
+    }));
   } else {
-    mapa.setView(centro, lat != null ? 16 : CONFIG.mapa.zoom);
+    mapa.setView(centro, pontoSelecionado ? 16 : CONFIG.mapa.zoom);
   }
 
   if (pino) { mapa.removeLayer(pino); pino = null; }
-  if (lat != null && lng != null) marcar(lat, lng, false);
+  if (pontoSelecionado) {
+    marcar(pontoSelecionado.lat, pontoSelecionado.lng, {
+      mover: false,
+      origem: 'Ponto salvo neste imóvel.',
+    });
+  }
 
-  // O container estava com display:none quando o Leaflet mediu. Sem este
-  // recálculo o mapa aparece cinza com um pedaço só de tile renderizado.
-  setTimeout(() => mapa.invalidateSize(), 60);
+  ajustarTamanhoDoMapa();
 }
 
-function marcar(lat, lng, mover = true) {
-  if (pino) pino.setLatLng([lat, lng]);
-  else pino = L.marker([lat, lng], { draggable: true }).addTo(mapa);
-  if (mover) mapa.setView([lat, lng], 16);
+function marcar(lat, lng, { mover = true, origem = '' } = {}) {
+  const latNumero = numeroCoordenada(lat);
+  const lngNumero = numeroCoordenada(lng);
+  if (!coordenadasValidas(latNumero, lngNumero)) return;
+
+  pontoSelecionado = { lat: latNumero, lng: lngNumero };
+
+  if (mapa) {
+    if (pino) {
+      pino.setLatLng(pontoSelecionado);
+    } else {
+      pino = L.marker(pontoSelecionado, {
+        draggable: true,
+        icon: iconeDoPino(),
+        title: 'Arraste para ajustar o ponto exato',
+      }).addTo(mapa);
+      pino.on('dragend', () => {
+        const posicao = pino.getLatLng();
+        marcar(posicao.lat, posicao.lng, {
+          mover: false,
+          origem: 'Pino ajustado manualmente.',
+        });
+      });
+    }
+    if (mover) mapa.setView(pontoSelecionado, 16);
+  }
+
+  atualizarPonto(origem);
+}
+
+function limparLocalizacao() {
+  pontoSelecionado = null;
+  if (mapa && pino) mapa.removeLayer(pino);
+  pino = null;
+  atualizarPonto();
+}
+
+function esconderSugestoes() {
+  const caixa = $('#sugestoes-endereco');
+  caixa.hidden = true;
+  caixa.innerHTML = '';
+  $('#i-busca-endereco').setAttribute('aria-expanded', 'false');
+  resultadosEndereco = [];
+}
+
+function mostrarSugestoes(resultados) {
+  const caixa = $('#sugestoes-endereco');
+  resultadosEndereco = resultados;
+
+  if (!resultados.length) {
+    caixa.innerHTML = '<p class="endereco-sugestoes__vazio">Nenhum endereço encontrado. Complete a rua, o bairro e a cidade ou marque diretamente no mapa.</p>';
+  } else {
+    caixa.innerHTML = resultados.map((resultado, indice) => `
+      <button class="endereco-sugestao" type="button" role="option" data-endereco="${indice}">
+        <i class="ph ph-map-pin" aria-hidden="true"></i>
+        <span>${escapar(resultado.display_name)}</span>
+      </button>`).join('') +
+      '<p class="endereco-sugestoes__credito">Resultados © colaboradores do OpenStreetMap</p>';
+  }
+
+  caixa.hidden = false;
+  $('#i-busca-endereco').setAttribute('aria-expanded', 'true');
+
+  $$('[data-endereco]', caixa).forEach((botao) => botao.addEventListener('click', () => {
+    const resultado = resultadosEndereco[Number(botao.dataset.endereco)];
+    if (resultado) aplicarEndereco(resultado);
+  }));
+}
+
+function valorDoEndereco(endereco, ...nomes) {
+  for (const nome of nomes) {
+    if (endereco[nome]) return endereco[nome];
+  }
+  return '';
+}
+
+function aplicarEndereco(resultado) {
+  const endereco = resultado.address ?? {};
+  const preencher = (seletor, valor) => {
+    if (valor) $(seletor).value = valor;
+  };
+
+  preencher('#i-logradouro', valorDoEndereco(
+    endereco, 'road', 'pedestrian', 'residential', 'footway', 'path',
+  ));
+  preencher('#i-numero', endereco.house_number);
+  preencher('#i-bairro', valorDoEndereco(
+    endereco, 'suburb', 'neighbourhood', 'quarter', 'city_district',
+  ));
+  preencher('#i-cidade', valorDoEndereco(
+    endereco, 'city', 'town', 'municipality', 'village',
+  ));
+  preencher('#i-cep', endereco.postcode);
+
+  const iso = endereco['ISO3166-2-lvl4'] ?? endereco['ISO3166-2-lvl6'] ?? '';
+  const uf = iso.match(/^BR-([A-Z]{2})$/)?.[1];
+  preencher('#i-uf', uf);
+
+  $('#i-busca-endereco').value = resultado.display_name;
+  marcar(resultado.lat, resultado.lon, {
+    mover: true,
+    origem: 'Endereço escolhido nas sugestões.',
+  });
+  esconderSugestoes();
+}
+
+function completarComCidade(termo) {
+  const partes = [termo];
+  const cidade = $('#i-cidade').value.trim();
+  const uf = $('#i-uf').value.trim().toUpperCase();
+  const simples = termo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  if (cidade) {
+    const cidadeSimples = cidade.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (!simples.includes(cidadeSimples)) partes.push(cidade);
+  }
+  if (uf && !new RegExp(`\\b${uf.toLowerCase()}\\b`).test(simples)) partes.push(uf);
+  partes.push('Brasil');
+  return partes.join(', ');
 }
 
 async function localizarEndereco() {
-  const termo = $('#i-busca-endereco').value.trim();
+  const entrada = $('#i-busca-endereco');
+  const termo = entrada.value.trim() || termoDosCampos();
   if (!termo) return;
+  entrada.value = termo;
 
   const botao = $('#localizar');
   botao.disabled = true;
+  botao.textContent = 'Buscando';
 
   try {
     // Nominatim é o geocodificador do OpenStreetMap: grátis, sem chave.
-    // Limite de uso é 1 consulta por segundo, por isso só roda no clique.
-    const url = new URL('https://nominatim.openstreetmap.org/search');
-    url.search = new URLSearchParams({
-      format: 'jsonv2', q: termo, countrycodes: 'br', limit: '1', addressdetails: '1',
-    });
-
-    const resposta = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
-    if (!resposta.ok) throw new Error(`o serviço respondeu ${resposta.status}`);
-    const [achado] = await resposta.json();
-
-    if (!achado) {
-      recado($('#forma-recado'), 'Não achei esse endereço. Tente clicar direto no mapa.', 'erro');
+    // A instância pública proíbe autocomplete a cada tecla e limita o uso a
+    // uma consulta por segundo. Por isso a busca só roda no clique/Enter,
+    // mostra opções e guarda consultas repetidas no cache desta sessão.
+    const consulta = completarComCidade(termo);
+    const chave = consulta.toLocaleLowerCase('pt-BR');
+    if (cacheEnderecos.has(chave)) {
+      mostrarSugestoes(cacheEnderecos.get(chave));
       return;
     }
 
-    marcar(Number(achado.lat), Number(achado.lon));
+    const espera = Math.max(0, 1000 - (Date.now() - ultimaBuscaEndereco));
+    if (espera) await new Promise((resolve) => setTimeout(resolve, espera));
 
-    const end = achado.address ?? {};
-    if (!$('#i-logradouro').value) $('#i-logradouro').value = end.road ?? '';
-    if (!$('#i-bairro').value) $('#i-bairro').value = end.suburb ?? end.neighbourhood ?? '';
-    if (!$('#i-cidade').value) $('#i-cidade').value = end.city ?? end.town ?? end.municipality ?? '';
-    if (!$('#i-cep').value) $('#i-cep').value = end.postcode ?? '';
-    $('#forma-recado').hidden = true;
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    url.search = new URLSearchParams({
+      format: 'jsonv2',
+      q: consulta,
+      countrycodes: 'br',
+      limit: '5',
+      addressdetails: '1',
+      namedetails: '1',
+      'accept-language': 'pt-BR',
+      // Prioriza a Região Metropolitana de Fortaleza sem impedir cadastro em
+      // outra cidade do Ceará ou do Brasil.
+      viewbox: '-39.2,-3.2,-37.8,-4.3',
+    });
+
+    const resposta = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+    ultimaBuscaEndereco = Date.now();
+    if (!resposta.ok) throw new Error(`o serviço respondeu ${resposta.status}`);
+    const resultados = await resposta.json();
+    cacheEnderecos.set(chave, resultados);
+    mostrarSugestoes(resultados);
   } catch (erro) {
     recado($('#forma-recado'), `Busca de endereço falhou: ${escapar(erro.message)}`, 'erro');
   } finally {
     botao.disabled = false;
+    botao.innerHTML = '<i class="ph ph-map-pin ico" aria-hidden="true"></i>Localizar';
   }
 }
 
@@ -751,6 +970,15 @@ function ligarEventos() {
   $('#forma').addEventListener('submit', salvar);
   $('#excluir').addEventListener('click', excluir);
   $('#localizar').addEventListener('click', localizarEndereco);
+  $('#limpar-localizacao').addEventListener('click', limparLocalizacao);
+  $('#i-busca-endereco').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      localizarEndereco();
+    }
+    if (e.key === 'Escape') esconderSugestoes();
+  });
+  $('#i-busca-endereco').addEventListener('input', esconderSugestoes);
 
   // abas
   const abas = [
@@ -768,13 +996,10 @@ function ligarEventos() {
     });
   }
 
-  // dinheiro com separador de milhar enquanto digita
+  // Mantém o texto intacto durante a digitação e formata apenas ao sair do
+  // campo. Assim ponto, vírgula e centavos não mudam o valor no meio da tecla.
   for (const id of ['#i-preco', '#i-condominio', '#i-iptu']) {
-    const el = $(id);
-    el.addEventListener('input', () => {
-      const n = lerNumero(el.value);
-      el.value = n == null ? '' : n.toLocaleString('pt-BR');
-    });
+    mascararMoeda($(id));
   }
 
   ligarSolta('#solta', '#arquivos', receberFotos);

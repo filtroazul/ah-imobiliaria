@@ -168,15 +168,18 @@
       <div class="grade-campos">
         <div class="campo">
           <label class="campo__rotulo" for="i-preco">Valor (R$)</label>
-          <input type="text" id="i-preco" name="preco" inputmode="numeric" required>
+          <input type="text" id="i-preco" name="preco" inputmode="decimal"
+                 placeholder="Ex: 495.000,00" required>
         </div>
         <div class="campo">
           <label class="campo__rotulo" for="i-condominio">Condomínio (R$/mês)</label>
-          <input type="text" id="i-condominio" name="condominio" inputmode="numeric">
+          <input type="text" id="i-condominio" name="condominio" inputmode="decimal"
+                 placeholder="Ex: 650,00">
         </div>
         <div class="campo">
           <label class="campo__rotulo" for="i-iptu">IPTU (R$/ano)</label>
-          <input type="text" id="i-iptu" name="iptu" inputmode="numeric">
+          <input type="text" id="i-iptu" name="iptu" inputmode="decimal"
+                 placeholder="Ex: 1.200,00">
         </div>
       </div>
     </div>
@@ -228,14 +231,29 @@
 
     <div class="bloco">
       <h2>Onde fica</h2>
+      <label class="campo__rotulo" for="i-busca-endereco">Buscar no mapa</label>
       <div class="busca-endereco">
         <input class="campo__entrada" type="text" id="i-busca-endereco"
-               placeholder="Digite o endereço e clique em localizar">
+               autocomplete="off" aria-autocomplete="list"
+               aria-controls="sugestoes-endereco" aria-expanded="false"
+               placeholder="Nome do condomínio, rua ou endereço completo">
         <button class="btn btn--secundario" type="button" id="localizar">
           <i class="ph ph-map-pin ico" aria-hidden="true"></i>Localizar
         </button>
       </div>
-      <span class="dica">Você também pode clicar direto no mapa para marcar o ponto exato.</span>
+      <div class="endereco-sugestoes" id="sugestoes-endereco"
+           role="listbox" aria-label="Sugestões de localização" hidden></div>
+      <span class="dica">
+        Escolha uma sugestão para preencher o endereço. Se precisar, clique no
+        mapa ou arraste o pino para ajustar o ponto exato.
+      </span>
+
+      <div class="ponto-localizacao" id="ponto-localizacao" aria-live="polite">
+        <span id="ponto-localizacao-texto">Nenhum ponto marcado ainda.</span>
+        <button class="btn-mini" type="button" id="limpar-localizacao" hidden>
+          Limpar ponto
+        </button>
+      </div>
 
       <div class="mapa-admin" id="mapa-admin"></div>
 
