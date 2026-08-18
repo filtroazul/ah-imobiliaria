@@ -82,7 +82,7 @@
   <div id="painel" hidden>
     <div class="admin__topo">
       <div>
-        <h1>Imóveis</h1>
+        <h1 id="painel-titulo">Imóveis</h1>
         <p class="admin__usuario" id="quem"></p>
       </div>
       <button class="btn" id="novo">
@@ -92,7 +92,7 @@
 
     <div class="abas" role="tablist">
       <button class="aba" id="aba-imoveis" role="tab" aria-selected="true">Imóveis</button>
-      <button class="aba" id="aba-leads" role="tab" aria-selected="false">Contatos recebidos</button>
+      <button class="aba" id="aba-crm" role="tab" aria-selected="false">Leads e funil</button>
       <button class="aba" id="aba-backup" role="tab" aria-selected="false">Backup</button>
     </div>
 
@@ -105,8 +105,112 @@
       <div class="lista" id="lista"></div>
     </section>
 
-    <section id="vista-leads" hidden>
-      <div class="lista" id="lista-leads"></div>
+    <section id="vista-crm" class="crm" hidden>
+      <div class="crm__cabecalho">
+        <div>
+          <h2>Central de leads</h2>
+          <p>Acompanhe cada oportunidade da primeira mensagem até o fechamento.</p>
+        </div>
+        <button class="btn" type="button" id="crm-novo-lead">
+          <i class="ph ph-user-plus ico" aria-hidden="true"></i>Novo lead
+        </button>
+      </div>
+
+      <div class="crm-filtros" aria-label="Filtros do funil">
+        <label class="crm-busca">
+          <span class="sr-only">Buscar lead</span>
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <input type="search" id="crm-busca" placeholder="Nome, telefone, bairro ou interesse">
+        </label>
+        <label class="campo campo--compacto">
+          <span class="campo__rotulo">Período</span>
+          <select id="crm-periodo">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="todos">Todo o histórico</option>
+          </select>
+        </label>
+        <label class="campo campo--compacto">
+          <span class="campo__rotulo">Origem</span>
+          <select id="crm-origem">
+            <option value="">Todas as origens</option>
+            <option value="site">Site</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="instagram">Instagram</option>
+            <option value="telefone">Telefone</option>
+            <option value="indicacao">Indicação</option>
+            <option value="portal">Portal</option>
+          </select>
+        </label>
+        <label class="marcacao crm-filtros__atrasados">
+          <input type="checkbox" id="crm-atrasados">
+          <span>Somente retornos atrasados</span>
+        </label>
+        <button class="btn-mini" type="button" id="crm-atualizar">
+          <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Atualizar
+        </button>
+        <button class="btn-mini" type="button" id="crm-exportar">
+          <i class="ph ph-file-csv" aria-hidden="true"></i>Exportar CSV
+        </button>
+      </div>
+
+      <div class="crm-kpis" id="crm-kpis" aria-live="polite"></div>
+
+      <div class="crm-resumo">
+        <section class="crm-painel crm-painel--grafico" aria-labelledby="crm-titulo-grafico">
+          <div class="crm-painel__topo">
+            <div>
+              <h3 id="crm-titulo-grafico">Entrada de leads</h3>
+              <p id="crm-grafico-legenda">Volume no período selecionado</p>
+            </div>
+          </div>
+          <div class="crm-grafico" id="crm-grafico"></div>
+        </section>
+
+        <section class="crm-painel" aria-labelledby="crm-titulo-origens">
+          <div class="crm-painel__topo">
+            <div>
+              <h3 id="crm-titulo-origens">Origem dos contatos</h3>
+              <p>Onde as oportunidades começaram</p>
+            </div>
+          </div>
+          <div class="crm-origens" id="crm-origens"></div>
+        </section>
+
+        <section class="crm-painel crm-ia" aria-labelledby="crm-titulo-ia">
+          <div class="crm-painel__topo">
+            <div>
+              <h3 id="crm-titulo-ia">Atendimento com IA</h3>
+              <p>O painel controla. A chave continua protegida no servidor.</p>
+            </div>
+            <span class="crm-ia__estado" id="crm-ia-estado"></span>
+          </div>
+          <label class="campo">
+            <span class="campo__rotulo">Como a IA trabalha</span>
+            <select id="crm-ia-modo">
+              <option value="automatico">Responder automaticamente</option>
+              <option value="sugestao">Somente sugerir respostas</option>
+              <option value="desligado">Desligada</option>
+            </select>
+          </label>
+          <p class="crm-ia__explica" id="crm-ia-explica"></p>
+          <div class="crm-ia__rodape">
+            <span id="crm-ia-agente">Agente: ah_imobiliaria</span>
+            <button class="btn-mini" type="button" id="crm-ia-salvar">Salvar modo</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="crm-funil-topo">
+        <div>
+          <h3>Funil comercial</h3>
+          <p>Arraste um lead para mudar de etapa ou abra a ficha para editar.</p>
+        </div>
+        <span id="crm-contagem"></span>
+      </div>
+      <div class="crm-funil" id="crm-funil" aria-live="polite"></div>
+      <div class="recado" id="crm-recado" aria-live="polite" hidden></div>
     </section>
 
     <!-- Backup existe porque no modo local a carteira mora no navegador, e
@@ -375,6 +479,237 @@
       <button class="btn-mini btn-mini--perigo" type="button" id="excluir" hidden>Excluir imóvel</button>
     </div>
   </form>
+
+  <!-- ------------------------------------------------------ ficha do lead -->
+  <dialog class="lead-dialog" id="lead-detalhe" aria-labelledby="lead-detalhe-nome">
+    <div class="lead-dialog__casca">
+      <header class="lead-dialog__topo">
+        <div>
+          <span class="lead-dialog__origem" id="lead-detalhe-origem"></span>
+          <h2 id="lead-detalhe-nome">Lead</h2>
+          <p id="lead-detalhe-contato"></p>
+        </div>
+        <button class="btn-icone" type="button" id="lead-detalhe-fechar" aria-label="Fechar ficha">
+          <i class="ph ph-x" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="lead-dialog__acoes">
+        <a class="btn" id="lead-whatsapp" target="_blank" rel="noopener">
+          <i class="ph ph-whatsapp-logo ico" aria-hidden="true"></i>Abrir WhatsApp
+        </a>
+        <a class="btn btn--secundario" id="lead-telefone-link">
+          <i class="ph ph-phone ico" aria-hidden="true"></i>Ligar
+        </a>
+        <label class="lead-ia-chave">
+          <input type="checkbox" id="lead-ia-ativa">
+          <span>IA ativa neste lead</span>
+        </label>
+      </div>
+
+      <div class="lead-dialog__grade">
+        <section class="lead-ficha" aria-labelledby="lead-ficha-titulo">
+          <form id="lead-form">
+            <div class="lead-secao-topo">
+              <h3 id="lead-ficha-titulo">Ficha comercial</h3>
+              <button class="btn-mini" type="submit" id="lead-salvar">Salvar ficha</button>
+            </div>
+
+            <div class="grade-campos grade-campos--2">
+              <label class="campo">
+                <span class="campo__rotulo">Nome</span>
+                <input type="text" id="lead-nome" maxlength="120" required>
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Telefone</span>
+                <input type="tel" id="lead-telefone">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">E-mail</span>
+                <input type="email" id="lead-email">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Etapa</span>
+                <select id="lead-status">
+                  <option value="novo">Novo</option>
+                  <option value="em_atendimento">Em atendimento</option>
+                  <option value="qualificado">Qualificado</option>
+                  <option value="visita_agendada">Visita agendada</option>
+                  <option value="proposta">Proposta</option>
+                  <option value="fechado">Fechado</option>
+                  <option value="perdido">Perdido</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Prioridade</span>
+                <select id="lead-prioridade">
+                  <option value="0">Baixa</option>
+                  <option value="1">Normal</option>
+                  <option value="2">Alta</option>
+                  <option value="3">Urgente</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Próximo contato</span>
+                <input type="date" id="lead-proximo-contato">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Finalidade</span>
+                <select id="lead-finalidade">
+                  <option value="">Não informado</option>
+                  <option value="venda">Compra</option>
+                  <option value="aluguel">Aluguel</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Tipo de imóvel</span>
+                <input type="text" id="lead-tipo" placeholder="Casa, apartamento, terreno">
+              </label>
+              <label class="campo campo--largo">
+                <span class="campo__rotulo">Bairros ou regiões</span>
+                <input type="text" id="lead-bairros" placeholder="Separe por vírgula">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Preço mínimo</span>
+                <input type="text" id="lead-preco-min" inputmode="decimal">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Preço máximo</span>
+                <input type="text" id="lead-preco-max" inputmode="decimal">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Valor potencial</span>
+                <input type="text" id="lead-valor-potencial" inputmode="decimal">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Quartos mínimos</span>
+                <input type="number" id="lead-quartos" min="0" max="30">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Prazo</span>
+                <input type="text" id="lead-prazo" placeholder="Ex: até dezembro">
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Pagamento</span>
+                <input type="text" id="lead-financiamento" placeholder="Financiamento ou à vista">
+              </label>
+              <label class="campo campo--largo">
+                <span class="campo__rotulo">Tags</span>
+                <input type="text" id="lead-tags" placeholder="Ex: MCMV, investidor, retorno rápido">
+              </label>
+              <label class="campo campo--largo">
+                <span class="campo__rotulo">Resumo</span>
+                <textarea id="lead-resumo" rows="4" placeholder="O que este lead procura e o que já foi combinado"></textarea>
+              </label>
+              <label class="campo campo--largo" id="lead-motivo-perda-campo" hidden>
+                <span class="campo__rotulo">Motivo da perda</span>
+                <input type="text" id="lead-motivo-perda">
+              </label>
+            </div>
+          </form>
+
+          <section class="lead-agenda" aria-labelledby="lead-agenda-titulo">
+            <div class="lead-secao-topo">
+              <h3 id="lead-agenda-titulo">Agendar visita</h3>
+            </div>
+            <form class="lead-agenda__form" id="lead-visita-form">
+              <label class="campo">
+                <span class="campo__rotulo">Data e hora</span>
+                <input type="datetime-local" id="lead-visita-quando" required>
+              </label>
+              <label class="campo">
+                <span class="campo__rotulo">Imóvel</span>
+                <select id="lead-visita-imovel"><option value="">Sem imóvel definido</option></select>
+              </label>
+              <label class="campo campo--largo">
+                <span class="campo__rotulo">Observação</span>
+                <input type="text" id="lead-visita-observacao" placeholder="Ponto de encontro ou confirmação pendente">
+              </label>
+              <button class="btn-mini" type="submit">Agendar visita</button>
+            </form>
+            <div class="lead-visitas" id="lead-visitas"></div>
+          </section>
+        </section>
+
+        <section class="lead-conversa" aria-labelledby="lead-conversa-titulo">
+          <div class="lead-secao-topo">
+            <div>
+              <h3 id="lead-conversa-titulo">Conversa e histórico</h3>
+              <p>Mensagens da IA, contatos e anotações da equipe.</p>
+            </div>
+          </div>
+          <div class="lead-timeline" id="lead-timeline" aria-live="polite"></div>
+
+          <div class="lead-compositor">
+            <label class="campo">
+              <span class="campo__rotulo">Resposta</span>
+              <textarea id="lead-resposta" rows="4" placeholder="Escreva ou peça uma sugestão para a IA"></textarea>
+            </label>
+            <div class="lead-compositor__acoes">
+              <button class="btn btn--secundario" type="button" id="lead-sugerir">
+                <i class="ph ph-sparkle ico" aria-hidden="true"></i>Sugerir com IA
+              </button>
+              <button class="btn-mini" type="button" id="lead-copiar">Copiar</button>
+              <button class="btn" type="button" id="lead-abrir-resposta">Abrir no WhatsApp</button>
+            </div>
+            <p class="dica" id="lead-sugestao-recado"></p>
+          </div>
+
+          <form class="lead-nota" id="lead-nota-form">
+            <label class="campo">
+              <span class="campo__rotulo">Adicionar anotação interna</span>
+              <textarea id="lead-nota" rows="2" placeholder="Ex: prefere contato depois das 18h" required></textarea>
+            </label>
+            <button class="btn-mini" type="submit">Salvar anotação</button>
+          </form>
+        </section>
+      </div>
+      <div class="recado" id="lead-recado" aria-live="polite" hidden></div>
+    </div>
+  </dialog>
+
+  <!-- ------------------------------------------------------- novo lead -->
+  <dialog class="modal-curto" id="novo-lead-dialog" aria-labelledby="novo-lead-titulo">
+    <form method="dialog" class="modal-curto__casca" id="novo-lead-form">
+      <header class="lead-secao-topo">
+        <div>
+          <h2 id="novo-lead-titulo">Novo lead</h2>
+          <p>Cadastre um contato recebido fora do site.</p>
+        </div>
+        <button class="btn-icone" type="button" id="novo-lead-fechar" aria-label="Fechar">
+          <i class="ph ph-x" aria-hidden="true"></i>
+        </button>
+      </header>
+      <label class="campo">
+        <span class="campo__rotulo">Nome</span>
+        <input type="text" id="novo-lead-nome" maxlength="120" required>
+      </label>
+      <label class="campo">
+        <span class="campo__rotulo">Telefone</span>
+        <input type="tel" id="novo-lead-telefone" required>
+      </label>
+      <label class="campo">
+        <span class="campo__rotulo">Origem</span>
+        <select id="novo-lead-origem">
+          <option value="telefone">Telefone</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="instagram">Instagram</option>
+          <option value="indicacao">Indicação</option>
+          <option value="portal">Portal</option>
+          <option value="site">Site</option>
+        </select>
+      </label>
+      <label class="campo">
+        <span class="campo__rotulo">Primeiro pedido</span>
+        <textarea id="novo-lead-mensagem" rows="4" placeholder="O que a pessoa está procurando"></textarea>
+      </label>
+      <div class="recado" id="novo-lead-recado" hidden></div>
+      <div class="modal-curto__acoes">
+        <button class="btn btn--secundario" type="button" id="novo-lead-cancelar">Cancelar</button>
+        <button class="btn" type="submit">Cadastrar lead</button>
+      </div>
+    </form>
+  </dialog>
 
 </main>
 

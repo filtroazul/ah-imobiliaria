@@ -36,8 +36,30 @@ admin.html   painel do corretor
 js/local.js  banco no navegador + exportar/importar a carteira
 js/dados.js  única API de leitura do site
 js/repo.js   única API de escrita do painel (nuvem ou local)
+js/crm.js    funil, estatísticas, ficha do lead, visitas e controles da IA
 supabase/    schema.sql, pra rodar no SQL Editor quando publicar
 ```
+
+## CRM de leads
+
+A aba **Leads e funil** do painel reúne:
+
+- indicadores de entrada, qualificação, visitas, conversão, tempo de resposta e
+  valor potencial;
+- exportação dos leads filtrados em CSV para Excel ou planilha;
+- funil arrastável com sete etapas;
+- busca por nome, telefone, bairro e interesse;
+- ficha comercial, histórico de mensagens, notas internas e agenda de visitas;
+- modo da IA global e pausa individual por lead;
+- sugestão de resposta autenticada, sem expor a chave do modelo no navegador.
+
+Em um banco que já existia antes do CRM, rode
+`supabase/migrations/20260818_crm_funil.sql` no SQL Editor. A integração da IA
+também precisa de `SUPABASE_SERVICE_ROLE_KEY` somente no servidor do webhook.
+
+Resposta automática vale para conversas que chegam pelo endpoint do ManyChat.
+Um lead criado apenas pelo formulário do site não abre sozinho uma conversa no
+WhatsApp: nesse caso o painel sugere o texto e abre o contato para o corretor.
 
 `RETOMAR.md` tem o resto: arquitetura, o passo a passo da publicação, o que já
 foi testado, o que não foi, e as armadilhas técnicas que já custaram tempo.

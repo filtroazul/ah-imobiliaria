@@ -13,6 +13,7 @@ import { CONFIG } from './config.js';
 import { moeda, TIPOS } from './dados.js';
 import * as repo from './repo.js';
 import * as local from './local.js';
+import * as crm from './crm.js';
 import { escapar, lerNumero, lerLinkDeVideo, mascararMoeda } from './ui.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -145,7 +146,7 @@ async function abrirPainel() {
   $('#quem').textContent = repo.naNuvem
     ? `Conectado como ${usuario.email}`
     : 'Carteira gravada neste navegador';
-  await Promise.all([carregarLista(), carregarLeads(), mostrarEspaco()]);
+  await Promise.all([carregarLista(), crm.carregarCRM(), mostrarEspaco()]);
 }
 
 async function carregarLista() {
@@ -196,61 +197,6 @@ async function carregarLista() {
 
   $$('[data-editar]', alvo).forEach((b) =>
     b.addEventListener('click', () => abrirFormulario(b.dataset.editar)));
-}
-
-/* ================================================================ leads == */
-
-async function carregarLeads() {
-  const alvo = $('#lista-leads');
-
-  let itens;
-  try {
-    itens = await repo.leads();
-  } catch (erro) {
-    alvo.innerHTML = `<div class="recado recado--erro">${escapar(erro.message)}</div>`;
-    return;
-  }
-
-  if (!itens.length) {
-    alvo.innerHTML = `
-      <div class="aviso">
-        <p class="aviso__titulo">Nenhum contato recebido ainda</p>
-        <p>Quem preencher o formulário do site aparece aqui.</p>
-      </div>`;
-    return;
-  }
-
-  const hoje = new Date().toISOString().slice(0, 10);
-
-  alvo.innerHTML = itens.map((l) => {
-    const atrasado = l.proximo_contato && l.proximo_contato <= hoje
-      && !['fechado', 'perdido'].includes(l.status);
-    const zap = `https://wa.me/${String(l.telefone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(
-      `Olá ${l.nome ?? ''}! Aqui é da Ah Imobiliária, sobre o contato que você deixou no site.`
-    )}`;
-    return `
-<div class="linha">
-  <div class="linha__foto" style="display:grid;place-items:center">
-    <i class="ph ph-user" aria-hidden="true"></i>
-  </div>
-  <div>
-    <div class="linha__titulo">${escapar(l.nome ?? 'Sem nome')}</div>
-    <div class="linha__meta">
-      ${escapar(l.telefone ?? '')} · ${escapar(l.origem)} ·
-      ${new Date(l.criado_em).toLocaleDateString('pt-BR')}
-      ${l.mensagem ? `<br>${escapar(l.mensagem.slice(0, 140))}` : ''}
-    </div>
-  </div>
-  <div class="linha__estado">
-    <span class="pilula${atrasado ? ' pilula--vendido' : ''}">
-      ${atrasado ? 'Retornar hoje' : escapar(l.status)}
-    </span>
-  </div>
-  <div class="linha__acoes">
-    <a class="btn-mini" href="${escapar(zap)}" target="_blank" rel="noopener">Chamar no zap</a>
-  </div>
-</div>`;
-  }).join('');
 }
 
 /* =========================================================== formulário == */
@@ -982,17 +928,20 @@ function ligarEventos() {
 
   // abas
   const abas = [
-    ['#aba-imoveis', '#vista-imoveis'],
-    ['#aba-leads', '#vista-leads'],
-    ['#aba-backup', '#vista-backup'],
+    ['#aba-imoveis', '#vista-imoveis', 'Imóveis'],
+    ['#aba-crm', '#vista-crm', 'Leads e funil'],
+    ['#aba-backup', '#vista-backup', 'Backup'],
   ];
   for (const [botao] of abas) {
     $(botao).addEventListener('click', () => {
-      for (const [b, vista] of abas) {
+      for (const [b, vista, titulo] of abas) {
         const ativa = b === botao;
         $(b).setAttribute('aria-selected', String(ativa));
         $(vista).hidden = !ativa;
+        if (ativa) $('#painel-titulo').textContent = titulo;
       }
+      $('#novo').hidden = botao !== '#aba-imoveis';
+      if (botao === '#aba-crm') crm.carregarCRM({ silencioso: true });
     });
   }
 
@@ -1049,6 +998,7 @@ function explicarModo() {
 
 async function iniciar() {
   ligarEventos();
+  crm.iniciarCRM();
   explicarModo();
 
   // No modo local não há login: quem abriu o painel já está na máquina onde a

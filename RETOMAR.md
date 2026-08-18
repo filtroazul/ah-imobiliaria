@@ -6,6 +6,46 @@
 
 ---
 
+## 18/AGO - CRM de leads implementado, ativação de produção pendente
+
+O painel ganhou uma aba **Leads e funil** com estatísticas reais, funil
+arrastável, filtros, ficha completa, histórico de mensagens, notas, visitas,
+valor potencial e controle da IA. O modo local foi atualizado para IndexedDB
+v2 e continua funcionando sem nuvem.
+
+Arquivos principais:
+
+- `js/crm.js`: toda a interface e os cálculos do CRM;
+- `js/repo.js`: leitura e escrita de leads, interações, visitas e configuração;
+- `supabase/migrations/20260818_crm_funil.sql`: migração idempotente do banco;
+- na raiz do projeto, `core/crm.py` e `webhook_manychat.py`: persistência da
+  conversa e endpoint autenticado de sugestão.
+
+Segurança decidida:
+
+- a chave da IA e a `SUPABASE_SERVICE_ROLE_KEY` ficam somente no backend;
+- o botão **Sugerir com IA** envia o JWT do corretor e o servidor valida se ele
+  pertence à equipe ativa;
+- a rota padrão `/manychat` continua no agente atual da AIOTI;
+- a imobiliária usa `/manychat/ah_imobiliaria`, com histórico isolado;
+- o bloco interno `RESUMO PARA O CORRETOR` não é mais devolvido ao cliente.
+
+Testes feitos em 18/08: JavaScript e Python compilados, SQL analisado como
+PostgreSQL válido, painel aberto em 1440 px e 390 px sem erro de console, funil
+arrastado, ficha salva, nota criada, visita agendada, modo da IA alterado e lead
+manual cadastrado.
+
+Para ativar no ar, nesta ordem:
+
+1. Rodar `supabase/migrations/20260818_crm_funil.sql` no SQL Editor.
+2. Adicionar `SUPABASE_SERVICE_ROLE_KEY` ao ambiente da VM e publicar o backend.
+3. Reiniciar `leadiot-webhook` e testar `/crm/sugerir`.
+4. Publicar este repositório no GitHub Pages.
+5. Apontar o fluxo da imobiliária no ManyChat para
+   `/manychat/ah_imobiliaria`, conforme `deploy/manychat-setup.md` da raiz.
+
+---
+
 ## 🆕 10/AGO — O BACKEND ESTÁ NO AR (§3 e §5 abaixo estão desatualizados)
 
 O Supabase foi criado e **tudo o que a §5 listava como "nunca rodou" rodou**.

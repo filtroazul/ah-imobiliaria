@@ -49,6 +49,13 @@ export const CONFIG = {
     zoom: 12,
   },
 
+  // Backend privado que executa o agente. A chave da IA nunca fica no site:
+  // o painel manda o token da sessão do corretor e o servidor valida antes de
+  // gerar uma sugestão. Troque apenas se o domínio do webhook mudar.
+  automacao: {
+    backendUrl: 'https://clergyman-rewrite-jolt.ngrok-free.dev',
+  },
+
   // Quantos imóveis o catálogo carrega por vez.
   porPagina: 9,
 };

@@ -17,7 +17,7 @@
 // jogar num <img>/<video> agora; `blob` só existe em arquivo ainda não gravado.
 // ============================================================================
 
-import { configurado } from './config.js';
+import { CONFIG, configurado } from './config.js';
 import { cliente, esquecerModo } from './dados.js';
 import * as local from './local.js';
 
@@ -237,16 +237,193 @@ export async function excluir(id, midias = []) {
 
 /* ================================================================ leads == */
 
+function padronizarLead(lead) {
+  return {
+    bairros: [],
+    tags: [],
+    ia_ativa: true,
+    prioridade: 1,
+    status: 'novo',
+    ...lead,
+  };
+}
+
 export async function leads() {
-  if (!naNuvem) return local.listarLeads();
+  return (await crmSnapshot()).leads;
+}
+
+/** Tudo de que o CRM precisa em uma leitura coerente. */
+export async function crmSnapshot() {
+  if (!naNuvem) {
+    const [leadsLocais, interacoes, visitas, configuracao, imoveis] = await Promise.all([
+      local.listarLeads(),
+      local.listarInteracoes(),
+      local.listarVisitas(),
+      local.obterConfiguracaoIA(),
+      local.listarImoveis(),
+    ]);
+    const porId = new Map(imoveis.map((imovel) => [imovel.id, imovel]));
+    return {
+      leads: leadsLocais.map((lead) => padronizarLead({
+        ...lead,
+        imovel: porId.get(lead.imovel_id) ?? null,
+      })),
+      interacoes,
+      visitas,
+      configuracao,
+      imoveis,
+    };
+  }
 
   const sb = await cliente();
+  const [qLeads, qInteracoes, qVisitas, qConfiguracao, qImoveis] = await Promise.all([
+    sb.from('leads').select('*').order('criado_em', { ascending: false }).limit(500),
+    sb.from('lead_interacoes').select('*').order('criado_em', { ascending: false }).limit(4000),
+    sb.from('visitas').select('*').order('quando', { ascending: false }).limit(1000),
+    sb.from('configuracoes_ia').select('*').eq('id', 'principal').maybeSingle(),
+    sb.from('imoveis').select('id, codigo, titulo, preco, bairro, cidade, status')
+      .order('atualizado_em', { ascending: false }).limit(500),
+  ]);
+
+  const falha = [qLeads, qInteracoes, qVisitas, qConfiguracao, qImoveis]
+    .find((resultado) => resultado.error);
+  if (falha) {
+    const faltouCRM = /lead_interacoes|configuracoes_ia|schema cache/i.test(falha.error.message);
+    throw new Error(faltouCRM
+      ? 'O CRM ainda não foi instalado no banco. Rode a migração supabase/migrations/20260818_crm_funil.sql.'
+      : falha.error.message);
+  }
+
+  const imoveis = qImoveis.data ?? [];
+  const porId = new Map(imoveis.map((imovel) => [imovel.id, imovel]));
+  return {
+    leads: (qLeads.data ?? []).map((lead) => padronizarLead({
+      ...lead,
+      imovel: porId.get(lead.imovel_id) ?? null,
+    })),
+    interacoes: qInteracoes.data ?? [],
+    visitas: qVisitas.data ?? [],
+    configuracao: qConfiguracao.data ?? {
+      id: 'principal', modo: 'automatico', agente: 'ah_imobiliaria',
+      canais: ['whatsapp', 'instagram'],
+    },
+    imoveis,
+  };
+}
+
+export async function criarLead(dados) {
+  const registro = padronizarLead(dados);
+  if (!naNuvem) return local.salvarLead(registro);
+
+  const sb = await cliente();
+  const atual = await sessao();
   const { data, error } = await sb.from('leads')
-    .select('id, nome, telefone, mensagem, origem, status, criado_em, proximo_contato')
-    .order('criado_em', { ascending: false })
-    .limit(100);
+    .insert({ ...registro, corretor_id: atual.id })
+    .select('*').single();
+  if (error) throw new Error(error.message);
+  return padronizarLead(data);
+}
+
+export async function atualizarLead(id, dados) {
+  const atualizacao = { ...dados };
+  const agora = new Date().toISOString();
+  if (dados.status === 'qualificado') atualizacao.qualificado_em ??= agora;
+  if (dados.status === 'fechado') atualizacao.fechado_em ??= agora;
+
+  if (!naNuvem) return local.atualizarLead(id, atualizacao);
+  const sb = await cliente();
+  const { data, error } = await sb.from('leads')
+    .update(atualizacao).eq('id', id).select('*').single();
+  if (error) throw new Error(error.message);
+  return padronizarLead(data);
+}
+
+export async function adicionarInteracao(interacao) {
+  if (!naNuvem) {
+    const salva = await local.salvarInteracao(interacao);
+    const mudanca = { ultimo_contato: salva.criado_em };
+    const lead = await local.obterLead(salva.lead_id);
+    if (salva.direcao === 'saida' && !lead?.primeira_resposta_em) {
+      mudanca.primeira_resposta_em = salva.criado_em;
+    }
+    await local.atualizarLead(salva.lead_id, mudanca);
+    return salva;
+  }
+
+  const sb = await cliente();
+  const atual = await sessao();
+  const registro = { ...interacao, corretor_id: atual.id };
+  const { data, error } = await sb.from('lead_interacoes')
+    .insert(registro).select('*').single();
+  if (error) throw new Error(error.message);
+
+  const mudanca = { ultimo_contato: data.criado_em };
+  if (data.direcao === 'saida') {
+    const { data: lead } = await sb.from('leads')
+      .select('primeira_resposta_em').eq('id', data.lead_id).single();
+    if (!lead?.primeira_resposta_em) mudanca.primeira_resposta_em = data.criado_em;
+  }
+  await sb.from('leads').update(mudanca).eq('id', data.lead_id);
+  return data;
+}
+
+export async function marcarInteracoesLidas(leadId) {
+  if (!naNuvem) return local.marcarInteracoesLidas(leadId);
+  const sb = await cliente();
+  const { error } = await sb.from('lead_interacoes')
+    .update({ lida_em: new Date().toISOString() })
+    .eq('lead_id', leadId).eq('direcao', 'entrada').is('lida_em', null);
+  if (error) throw new Error(error.message);
+}
+
+export async function salvarVisita(visita) {
+  if (!naNuvem) {
+    const salva = await local.salvarVisita(visita);
+    await local.atualizarLead(visita.lead_id, { status: 'visita_agendada' });
+    return salva;
+  }
+  const sb = await cliente();
+  const atual = await sessao();
+  const { data, error } = await sb.from('visitas')
+    .insert({ ...visita, corretor_id: atual.id }).select('*').single();
+  if (error) throw new Error(error.message);
+  const { error: erroLead } = await sb.from('leads')
+    .update({ status: 'visita_agendada' }).eq('id', visita.lead_id);
+  if (erroLead) throw new Error(erroLead.message);
+  return data;
+}
+
+export async function salvarConfiguracaoIA(dados) {
+  if (!naNuvem) return local.salvarConfiguracaoIA(dados);
+  const sb = await cliente();
+  const atual = await sessao();
+  const { data, error } = await sb.from('configuracoes_ia')
+    .upsert({ ...dados, id: 'principal', atualizado_por: atual.id })
+    .select('*').single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function sugerirResposta(leadId, instrucao = '') {
+  if (!naNuvem) {
+    throw new Error('A sugestão da IA só fica disponível no painel conectado à nuvem.');
+  }
+  const url = String(CONFIG.automacao?.backendUrl ?? '').replace(/\/$/, '');
+  if (!url) throw new Error('O endereço do backend da IA ainda não foi configurado.');
+
+  const sb = await cliente();
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sua sessão expirou. Entre no painel novamente.');
+
+  const resposta = await fetch(`${url}/crm/sugerir`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ lead_id: leadId, instrucao }),
+  });
+  const corpo = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) throw new Error(corpo.error ?? 'A IA não conseguiu preparar a resposta.');
+  return corpo.sugestao;
 }
 
 /* ============================================================ utilidades == */

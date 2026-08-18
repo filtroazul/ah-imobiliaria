@@ -227,20 +227,52 @@ create table if not exists public.leads (
   imovel_id  uuid references public.imoveis (id) on delete set null,
 
   status     text not null default 'novo'
-             check (status in ('novo', 'em_atendimento', 'visita_agendada', 'proposta', 'fechado', 'perdido')),
+             check (status in ('novo', 'em_atendimento', 'qualificado', 'visita_agendada', 'proposta', 'fechado', 'perdido')),
   corretor_id uuid references public.corretores (id) on delete set null,
 
   -- follow-up: a data em que o corretor precisa voltar a falar com esse lead
   proximo_contato date,
   ultimo_contato  timestamptz,
 
+  -- CRM e automacao. canal_id liga a pessoa ao contato do ManyChat/WhatsApp.
+  canal_id       text,
+  ia_ativa       boolean not null default true,
+  prioridade     smallint not null default 1 check (prioridade between 0 and 3),
+  valor_potencial numeric(12, 2),
+  tags           text[] not null default '{}',
+  motivo_perda   text,
+  primeira_resposta_em timestamptz,
+  qualificado_em timestamptz,
+  fechado_em     timestamptz,
+
   criado_em     timestamptz not null default now(),
   atualizado_em timestamptz not null default now()
 );
 
+-- Mantem o arquivo idempotente tambem em projetos criados antes do CRM.
+alter table public.leads add column if not exists canal_id text;
+alter table public.leads add column if not exists ia_ativa boolean not null default true;
+alter table public.leads add column if not exists prioridade smallint not null default 1;
+alter table public.leads add column if not exists valor_potencial numeric(12, 2);
+alter table public.leads add column if not exists tags text[] not null default '{}';
+alter table public.leads add column if not exists motivo_perda text;
+alter table public.leads add column if not exists primeira_resposta_em timestamptz;
+alter table public.leads add column if not exists qualificado_em timestamptz;
+alter table public.leads add column if not exists fechado_em timestamptz;
+
+alter table public.leads drop constraint if exists leads_status_check;
+alter table public.leads add constraint leads_status_check
+  check (status in ('novo', 'em_atendimento', 'qualificado', 'visita_agendada', 'proposta', 'fechado', 'perdido'));
+
+alter table public.leads drop constraint if exists leads_prioridade_check;
+alter table public.leads add constraint leads_prioridade_check
+  check (prioridade between 0 and 3);
+
 create index if not exists leads_status_idx    on public.leads (status, criado_em desc);
 create index if not exists leads_followup_idx  on public.leads (proximo_contato)
   where status not in ('fechado', 'perdido');
+create unique index if not exists leads_canal_idx on public.leads (origem, canal_id)
+  where canal_id is not null;
 
 
 -- ============================================================================
@@ -261,6 +293,67 @@ create table if not exists public.visitas (
 
 create index if not exists visitas_agenda_idx on public.visitas (quando)
   where status in ('agendada', 'confirmada');
+
+
+-- ============================================================================
+-- 5.1 HISTORICO DO LEAD
+-- ----------------------------------------------------------------------------
+-- Uma linha por mensagem, nota ou mudanca importante. O painel usa esta tabela
+-- como linha do tempo e o webhook usa o mesmo historico para manter a conversa
+-- da IA mesmo depois de reiniciar o servidor.
+-- ============================================================================
+
+create table if not exists public.lead_interacoes (
+  id           uuid primary key default gen_random_uuid(),
+  lead_id      uuid not null references public.leads (id) on delete cascade,
+  tipo         text not null default 'mensagem'
+               check (tipo in ('mensagem', 'nota', 'status', 'ia_resumo', 'erro')),
+  direcao      text not null default 'interna'
+               check (direcao in ('entrada', 'saida', 'interna')),
+  autor        text not null default 'sistema'
+               check (autor in ('lead', 'corretor', 'ia', 'sistema')),
+  canal        text not null default 'painel'
+               check (canal in ('site', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal', 'painel', 'sistema')),
+  conteudo     text not null,
+  automatico   boolean not null default false,
+  external_id  text,
+  lida_em      timestamptz,
+  corretor_id  uuid references public.corretores (id) on delete set null,
+  metadados    jsonb not null default '{}'::jsonb,
+  criado_em    timestamptz not null default now()
+);
+
+create index if not exists lead_interacoes_timeline_idx
+  on public.lead_interacoes (lead_id, criado_em);
+create index if not exists lead_interacoes_nao_lidas_idx
+  on public.lead_interacoes (lead_id, criado_em desc)
+  where direcao = 'entrada' and lida_em is null;
+create unique index if not exists lead_interacoes_externa_idx
+  on public.lead_interacoes (canal, external_id)
+  where external_id is not null;
+
+
+-- ============================================================================
+-- 5.2 CONFIGURACAO DA IA
+-- ----------------------------------------------------------------------------
+-- A chave do modelo nunca entra aqui. Ela continua apenas no servidor. Esta
+-- tabela guarda controles operacionais que o corretor pode mudar no painel.
+-- ============================================================================
+
+create table if not exists public.configuracoes_ia (
+  id              text primary key default 'principal',
+  modo            text not null default 'automatico'
+                  check (modo in ('automatico', 'sugestao', 'desligado')),
+  agente          text not null default 'ah_imobiliaria',
+  canais          text[] not null default array['whatsapp', 'instagram'],
+  mensagem_pausa  text not null default 'Recebi sua mensagem. O corretor vai continuar o atendimento por aqui.',
+  atualizado_por  uuid references public.corretores (id) on delete set null,
+  atualizado_em   timestamptz not null default now()
+);
+
+insert into public.configuracoes_ia (id)
+values ('principal')
+on conflict (id) do nothing;
 
 
 -- ============================================================================
@@ -285,6 +378,10 @@ drop trigger if exists leads_touch on public.leads;
 create trigger leads_touch before update on public.leads
   for each row execute function public.touch_atualizado_em();
 
+drop trigger if exists configuracoes_ia_touch on public.configuracoes_ia;
+create trigger configuracoes_ia_touch before update on public.configuracoes_ia
+  for each row execute function public.touch_atualizado_em();
+
 
 -- ============================================================================
 -- 7. RLS — a única coisa que separa o site do seu pai de um site vandalizado
@@ -304,6 +401,8 @@ alter table public.fotos      enable row level security;
 alter table public.videos     enable row level security;
 alter table public.leads      enable row level security;
 alter table public.visitas    enable row level security;
+alter table public.lead_interacoes enable row level security;
+alter table public.configuracoes_ia enable row level security;
 
 -- Helper. É SECURITY DEFINER de propósito: ele lê a tabela corretores
 -- ignorando o RLS dela. Sem isso, a policy de corretores chamaria uma função
@@ -409,6 +508,8 @@ create policy "equipe escreve videos"
 -- lead exclusivamente pela RPC registrar_lead() logo abaixo.
 drop policy if exists "equipe gerencia leads"   on public.leads;
 drop policy if exists "equipe gerencia visitas" on public.visitas;
+drop policy if exists "equipe gerencia interacoes" on public.lead_interacoes;
+drop policy if exists "equipe gerencia configuracao ia" on public.configuracoes_ia;
 
 create policy "equipe gerencia leads"
   on public.leads for all
@@ -421,6 +522,23 @@ create policy "equipe gerencia visitas"
   to authenticated
   using (public.e_equipe())
   with check (public.e_equipe());
+
+create policy "equipe gerencia interacoes"
+  on public.lead_interacoes for all
+  to authenticated
+  using (public.e_equipe())
+  with check (public.e_equipe());
+
+create policy "equipe gerencia configuracao ia"
+  on public.configuracoes_ia for all
+  to authenticated
+  using (public.e_equipe())
+  with check (public.e_equipe());
+
+grant select, insert, update, delete on public.lead_interacoes to authenticated;
+grant select, insert, update, delete on public.configuracoes_ia to authenticated;
+grant all on public.lead_interacoes to service_role;
+grant all on public.configuracoes_ia to service_role;
 
 
 -- ============================================================================
@@ -517,6 +635,14 @@ begin
     current_date + 1          -- follow-up padrão: cobrar o corretor no dia seguinte
   )
   returning id into v_id;
+
+  if coalesce(trim(p_mensagem), '') <> '' then
+    insert into public.lead_interacoes
+      (lead_id, tipo, direcao, autor, canal, conteudo, automatico)
+    values
+      (v_id, 'mensagem', 'entrada', 'lead', p_origem,
+       left(trim(p_mensagem), 4000), false);
+  end if;
 
   return v_id;
 end;

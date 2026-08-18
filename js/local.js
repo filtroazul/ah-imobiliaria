@@ -18,12 +18,15 @@
 // ============================================================================
 
 const BANCO = 'ah-imobiliaria';
-const VERSAO = 1;
+const VERSAO = 2;
 
 export const LOJAS = {
   imoveis: 'imoveis',
   midias: 'midias',
   leads: 'leads',
+  interacoes: 'lead_interacoes',
+  visitas: 'visitas',
+  configuracaoIA: 'configuracao_ia',
   meta: 'meta',
 };
 
@@ -52,6 +55,19 @@ function abrir() {
       }
       if (!db.objectStoreNames.contains(LOJAS.leads)) {
         db.createObjectStore(LOJAS.leads, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(LOJAS.interacoes)) {
+        const loja = db.createObjectStore(LOJAS.interacoes, { keyPath: 'id' });
+        loja.createIndex('lead_id', 'lead_id');
+        loja.createIndex('criado_em', 'criado_em');
+      }
+      if (!db.objectStoreNames.contains(LOJAS.visitas)) {
+        const loja = db.createObjectStore(LOJAS.visitas, { keyPath: 'id' });
+        loja.createIndex('lead_id', 'lead_id');
+        loja.createIndex('quando', 'quando');
+      }
+      if (!db.objectStoreNames.contains(LOJAS.configuracaoIA)) {
+        db.createObjectStore(LOJAS.configuracaoIA, { keyPath: 'id' });
       }
       if (!db.objectStoreNames.contains(LOJAS.meta)) {
         db.createObjectStore(LOJAS.meta, { keyPath: 'chave' });
@@ -226,14 +242,49 @@ export function esquecerEnderecos(ids = null) {
 /* ================================================================ leads == */
 
 export async function salvarLead(lead) {
+  const agora = new Date().toISOString();
   const registro = {
+    finalidade: null,
+    tipo: null,
+    bairros: [],
+    preco_min: null,
+    preco_max: null,
+    quartos_min: null,
+    prazo: null,
+    financiamento: null,
+    resumo: null,
+    imovel_id: null,
+    proximo_contato: null,
+    ultimo_contato: null,
+    canal_id: null,
+    ia_ativa: true,
+    prioridade: 1,
+    valor_potencial: null,
+    tags: [],
+    motivo_perda: null,
     ...lead,
-    id: crypto.randomUUID(),
-    status: 'novo',
-    criado_em: new Date().toISOString(),
+    id: lead.id ?? crypto.randomUUID(),
+    status: lead.status ?? 'novo',
+    criado_em: lead.criado_em ?? agora,
+    atualizado_em: agora,
   };
   await transacao(LOJAS.leads, 'readwrite', (loja) => pedir(loja.put(registro)));
   return registro;
+}
+
+export async function atualizarLead(id, dados) {
+  return transacao(LOJAS.leads, 'readwrite', async (loja) => {
+    const atual = await pedir(loja.get(id));
+    if (!atual) throw new Error('Esse lead não existe mais.');
+    const registro = {
+      ...atual,
+      ...dados,
+      id,
+      atualizado_em: new Date().toISOString(),
+    };
+    await pedir(loja.put(registro));
+    return registro;
+  });
 }
 
 export async function listarLeads() {
@@ -241,8 +292,101 @@ export async function listarLeads() {
   return itens.sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)));
 }
 
+export async function obterLead(id) {
+  return transacao(LOJAS.leads, 'readonly', (loja) => pedir(loja.get(id)));
+}
+
 export async function excluirLead(id) {
-  return transacao(LOJAS.leads, 'readwrite', (loja) => pedir(loja.delete(id)));
+  return transacao(
+    [LOJAS.leads, LOJAS.interacoes, LOJAS.visitas],
+    'readwrite',
+    async (leads, interacoes, visitas) => {
+      await pedir(leads.delete(id));
+      for (const chave of await pedir(interacoes.index('lead_id').getAllKeys(id))) {
+        await pedir(interacoes.delete(chave));
+      }
+      for (const chave of await pedir(visitas.index('lead_id').getAllKeys(id))) {
+        await pedir(visitas.delete(chave));
+      }
+    },
+  );
+}
+
+export async function salvarInteracao(interacao) {
+  const registro = {
+    tipo: 'mensagem',
+    direcao: 'interna',
+    autor: 'sistema',
+    canal: 'painel',
+    automatico: false,
+    metadados: {},
+    ...interacao,
+    id: interacao.id ?? crypto.randomUUID(),
+    criado_em: interacao.criado_em ?? new Date().toISOString(),
+  };
+  await transacao(LOJAS.interacoes, 'readwrite', (loja) => pedir(loja.put(registro)));
+  return registro;
+}
+
+export async function listarInteracoes() {
+  const itens = await transacao(
+    LOJAS.interacoes, 'readonly', (loja) => pedir(loja.getAll()),
+  );
+  return itens.sort((a, b) => String(a.criado_em).localeCompare(String(b.criado_em)));
+}
+
+export async function marcarInteracoesLidas(leadId) {
+  const agora = new Date().toISOString();
+  return transacao(LOJAS.interacoes, 'readwrite', async (loja) => {
+    const itens = await pedir(loja.index('lead_id').getAll(leadId));
+    for (const item of itens) {
+      if (item.direcao === 'entrada' && !item.lida_em) {
+        await pedir(loja.put({ ...item, lida_em: agora }));
+      }
+    }
+  });
+}
+
+export async function salvarVisita(visita) {
+  const registro = {
+    status: 'agendada',
+    ...visita,
+    id: visita.id ?? crypto.randomUUID(),
+    criado_em: visita.criado_em ?? new Date().toISOString(),
+  };
+  await transacao(LOJAS.visitas, 'readwrite', (loja) => pedir(loja.put(registro)));
+  return registro;
+}
+
+export async function listarVisitas() {
+  const itens = await transacao(LOJAS.visitas, 'readonly', (loja) => pedir(loja.getAll()));
+  return itens.sort((a, b) => String(a.quando).localeCompare(String(b.quando)));
+}
+
+export async function obterConfiguracaoIA() {
+  const salvo = await transacao(
+    LOJAS.configuracaoIA, 'readonly', (loja) => pedir(loja.get('principal')),
+  );
+  return salvo ?? {
+    id: 'principal',
+    modo: 'automatico',
+    agente: 'ah_imobiliaria',
+    canais: ['whatsapp', 'instagram'],
+    mensagem_pausa: 'Recebi sua mensagem. O corretor vai continuar o atendimento por aqui.',
+  };
+}
+
+export async function salvarConfiguracaoIA(dados) {
+  const registro = {
+    ...(await obterConfiguracaoIA()),
+    ...dados,
+    id: 'principal',
+    atualizado_em: new Date().toISOString(),
+  };
+  await transacao(
+    LOJAS.configuracaoIA, 'readwrite', (loja) => pedir(loja.put(registro)),
+  );
+  return registro;
 }
 
 /* ====================================================== exportar/importar == */
@@ -265,7 +409,9 @@ async function deBase64(texto) {
 }
 
 export async function exportar() {
-  const [imoveis, leads] = await Promise.all([listarImoveis(), listarLeads()]);
+  const [imoveis, leads, interacoes, visitas, configuracao_ia] = await Promise.all([
+    listarImoveis(), listarLeads(), listarInteracoes(), listarVisitas(), obterConfiguracaoIA(),
+  ]);
   const midias = await transacao(LOJAS.midias, 'readonly', (loja) => pedir(loja.getAll()));
 
   const midiasSerializadas = [];
@@ -278,11 +424,14 @@ export async function exportar() {
 
   return {
     formato: 'ah-imobiliaria/carteira',
-    versao: 1,
+    versao: 2,
     exportado_em: new Date().toISOString(),
     imoveis,
     midias: midiasSerializadas,
     leads,
+    interacoes,
+    visitas,
+    configuracao_ia,
   };
 }
 
@@ -303,20 +452,33 @@ export async function importar(pacote, { substituir = false } = {}) {
   // A conversão de base64 fica FORA da transação de propósito: fetch() é
   // assíncrono de verdade e uma transação do IndexedDB fecha sozinha assim que
   // a fila dela esvazia, mesmo com o await ainda pendurado.
-  await transacao([LOJAS.imoveis, LOJAS.midias, LOJAS.leads], 'readwrite',
-    async (lojaImoveis, lojaMidias, lojaLeads) => {
+  await transacao([
+    LOJAS.imoveis, LOJAS.midias, LOJAS.leads, LOJAS.interacoes,
+    LOJAS.visitas, LOJAS.configuracaoIA,
+  ], 'readwrite',
+  async (lojaImoveis, lojaMidias, lojaLeads, lojaInteracoes, lojaVisitas, lojaConfig) => {
       if (substituir) {
         await pedir(lojaImoveis.clear());
         await pedir(lojaMidias.clear());
         await pedir(lojaLeads.clear());
+        await pedir(lojaInteracoes.clear());
+        await pedir(lojaVisitas.clear());
+        await pedir(lojaConfig.clear());
       }
       for (const i of pacote.imoveis ?? []) await pedir(lojaImoveis.put(i));
       for (const m of midias) await pedir(lojaMidias.put(m));
       for (const l of pacote.leads ?? []) await pedir(lojaLeads.put(l));
+      for (const i of pacote.interacoes ?? []) await pedir(lojaInteracoes.put(i));
+      for (const v of pacote.visitas ?? []) await pedir(lojaVisitas.put(v));
+      if (pacote.configuracao_ia) await pedir(lojaConfig.put(pacote.configuracao_ia));
     });
 
   esquecerEnderecos();
-  return { imoveis: (pacote.imoveis ?? []).length, midias: midias.length };
+  return {
+    imoveis: (pacote.imoveis ?? []).length,
+    midias: midias.length,
+    leads: (pacote.leads ?? []).length,
+  };
 }
 
 /** Quanto a carteira local está ocupando, quando o navegador conta. */
