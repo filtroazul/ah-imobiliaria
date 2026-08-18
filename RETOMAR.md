@@ -6,7 +6,7 @@
 
 ---
 
-## 18/AGO - CRM de leads implementado, ativação de produção pendente
+## 18/AGO - CRM de leads implementado e publicado
 
 O painel ganhou uma aba **Leads e funil** com estatísticas reais, funil
 arrastável, filtros, ficha completa, histórico de mensagens, notas, visitas,
@@ -35,14 +35,19 @@ PostgreSQL válido, painel aberto em 1440 px e 390 px sem erro de console, funil
 arrastado, ficha salva, nota criada, visita agendada, modo da IA alterado e lead
 manual cadastrado.
 
-Para ativar no ar, nesta ordem:
+Produção concluída em 18/08:
 
-1. Rodar `supabase/migrations/20260818_crm_funil.sql` no SQL Editor.
-2. Adicionar `SUPABASE_SERVICE_ROLE_KEY` ao ambiente da VM e publicar o backend.
-3. Reiniciar `leadiot-webhook` e testar `/crm/sugerir`.
-4. Publicar este repositório no GitHub Pages.
-5. Apontar o fluxo da imobiliária no ManyChat para
-   `/manychat/ah_imobiliaria`, conforme `deploy/manychat-setup.md` da raiz.
+1. A migração `20260818_crm_funil.sql` foi aplicada no projeto real e as tabelas
+   `lead_interacoes` e `configuracoes_ia` foram verificadas pela API.
+2. A chave secreta ficou somente em `/etc/leadiot-webhook.env` na VM, modo 600,
+   com backup anterior em `/etc/leadiot-webhook.env.bak-20260818-crm`.
+3. O serviço `leadiot-webhook` foi atualizado e reiniciado; o health externo
+   responde `crm: true` e a rota antiga continua usando o agente `aioti`.
+4. O painel foi publicado no GitHub Pages pelo commit `2c05645` e validado com
+   login real: 6 indicadores, 7 etapas, modo da IA e nenhuma falha de rede.
+5. Única pendência externa: editar/publicar o fluxo dentro do ManyChat para
+   chamar `/manychat/ah_imobiliaria`. A conta exige login/verificação humana;
+   o endpoint e o passo a passo em `deploy/manychat-setup.md` já estão prontos.
 
 ---
 
@@ -83,17 +88,17 @@ O Supabase foi criado e **tudo o que a §5 listava como "nunca rodou" rodou**.
    instâncias de auth disputando o mesmo token ("Multiple GoTrueClient
    instances"). A sessão do corretor podia cair no meio de um cadastro.
 
-**O catálogo está VAZIO de propósito** — os imóveis que usei pra testar foram
-apagados. O primeiro cadastro real é pelo painel.
+**O catálogo já está em produção.** Em 18/08 havia 7 imóveis publicados no
+Supabase; novos cadastros e alterações continuam sendo feitos pelo painel.
 
 ### O que ainda depende de você
 
-1. **Secrets do Streamlit Cloud**: sem `SUPABASE_URL` e `SUPABASE_ANON_KEY` lá,
-   o agente no ar responde "catálogo indisponível". Local já está configurado.
-2. **Ligar o GitHub Pages** (continua pendente desde 08/ago).
-3. **Pausa por inatividade**: projeto free do Supabase pausa depois de **7 dias
-   sem request**. Enquanto o site não tiver visita de verdade, isso vai
-   acontecer.
+1. **ManyChat**: entrar na conta, colocar o External Request descrito acima e
+   publicar a automação do Instagram/WhatsApp.
+2. **Streamlit Cloud**: se o agente da plataforma principal precisar consultar
+   esse catálogo, conferir `SUPABASE_URL` e `SUPABASE_ANON_KEY` nos secrets dele.
+3. **Keep-alive**: o workflow do GitHub está ativo; conferir apenas se o GitHub
+   o desabilitar depois de 60 dias sem commits.
 
 ---
 
@@ -117,9 +122,9 @@ Abra `http://127.0.0.1:8720/index.html`. O painel é `/admin.html`.
 | **local** | sem Supabase e ao menos 1 imóvel | a carteira REAL, gravada no navegador. A faixa some sozinha |
 | **nuvem** | com as chaves em `js/config.js` | Supabase, com login e acessível de qualquer lugar |
 
-**Hoje ele está em "exemplo" e vira "local" no primeiro cadastro.** O painel
-abre direto, sem login, e grava de verdade: fotos, vídeos, mapa, tudo. O que o
-modo local **não** faz é publicar — ver §3.
+**Hoje ele está em "nuvem".** O site publicado lê o Supabase e o painel exige
+login do corretor. Os modos `exemplo` e `local` continuam disponíveis apenas
+para desenvolvimento ou demonstração sem chaves.
 
 ---
 
