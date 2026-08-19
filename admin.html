@@ -60,6 +60,7 @@
 
   <!-- ------------------------------------------------------------ login -->
   <form class="login" id="login" hidden>
+    <img class="login__marca" src="marca.svg" alt="" width="240" height="224" decoding="async">
     <h1>Painel do corretor</h1>
     <!-- Quem le esta tela e o corretor, 60+, nao quem montou o sistema.
          "Supabase" nao significa nada pra ele e so assusta. -->
@@ -515,96 +516,114 @@
               <button class="btn-mini" type="submit" id="lead-salvar">Salvar ficha</button>
             </div>
 
-            <div class="grade-campos grade-campos--2">
-              <label class="campo">
-                <span class="campo__rotulo">Nome</span>
-                <input type="text" id="lead-nome" maxlength="120" required>
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Telefone</span>
-                <input type="tel" id="lead-telefone">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">E-mail</span>
-                <input type="email" id="lead-email">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Etapa</span>
-                <select id="lead-status">
-                  <option value="novo">Novo</option>
-                  <option value="em_atendimento">Em atendimento</option>
-                  <option value="qualificado">Qualificado</option>
-                  <option value="visita_agendada">Visita agendada</option>
-                  <option value="proposta">Proposta</option>
-                  <option value="fechado">Fechado</option>
-                  <option value="perdido">Perdido</option>
-                </select>
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Prioridade</span>
-                <select id="lead-prioridade">
-                  <option value="0">Baixa</option>
-                  <option value="1">Normal</option>
-                  <option value="2">Alta</option>
-                  <option value="3">Urgente</option>
-                </select>
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Próximo contato</span>
-                <input type="date" id="lead-proximo-contato">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Finalidade</span>
-                <select id="lead-finalidade">
-                  <option value="">Não informado</option>
-                  <option value="venda">Compra</option>
-                  <option value="aluguel">Aluguel</option>
-                </select>
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Tipo de imóvel</span>
-                <input type="text" id="lead-tipo" placeholder="Casa, apartamento, terreno">
-              </label>
-              <label class="campo campo--largo">
-                <span class="campo__rotulo">Bairros ou regiões</span>
-                <input type="text" id="lead-bairros" placeholder="Separe por vírgula">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Preço mínimo</span>
-                <input type="text" id="lead-preco-min" inputmode="decimal">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Preço máximo</span>
-                <input type="text" id="lead-preco-max" inputmode="decimal">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Valor potencial</span>
-                <input type="text" id="lead-valor-potencial" inputmode="decimal">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Quartos mínimos</span>
-                <input type="number" id="lead-quartos" min="0" max="30">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Prazo</span>
-                <input type="text" id="lead-prazo" placeholder="Ex: até dezembro">
-              </label>
-              <label class="campo">
-                <span class="campo__rotulo">Pagamento</span>
-                <input type="text" id="lead-financiamento" placeholder="Financiamento ou à vista">
-              </label>
-              <label class="campo campo--largo">
-                <span class="campo__rotulo">Tags</span>
-                <input type="text" id="lead-tags" placeholder="Ex: MCMV, investidor, retorno rápido">
-              </label>
-              <label class="campo campo--largo">
-                <span class="campo__rotulo">Resumo</span>
-                <textarea id="lead-resumo" rows="4" placeholder="O que este lead procura e o que já foi combinado"></textarea>
-              </label>
-              <label class="campo campo--largo" id="lead-motivo-perda-campo" hidden>
-                <span class="campo__rotulo">Motivo da perda</span>
-                <input type="text" id="lead-motivo-perda">
-              </label>
+            <!-- Os 18 campos vinham numa lista plana só, e achar "prazo" no
+                 meio dela exigia ler tudo. Agrupados em três blocos com o
+                 nome do assunto, o corretor pula direto pro que quer mexer. -->
+            <div class="lead-grupo" role="group" aria-labelledby="lead-grupo-quem">
+              <h4 class="lead-grupo__titulo" id="lead-grupo-quem">Quem é</h4>
+              <div class="grade-campos grade-campos--2">
+                <label class="campo">
+                  <span class="campo__rotulo">Nome</span>
+                  <input type="text" id="lead-nome" maxlength="120" required>
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Telefone</span>
+                  <input type="tel" id="lead-telefone">
+                </label>
+                <label class="campo campo--largo">
+                  <span class="campo__rotulo">E-mail</span>
+                  <input type="email" id="lead-email">
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Etapa</span>
+                  <select id="lead-status">
+                    <option value="novo">Novo</option>
+                    <option value="em_atendimento">Em atendimento</option>
+                    <option value="qualificado">Qualificado</option>
+                    <option value="visita_agendada">Visita agendada</option>
+                    <option value="proposta">Proposta</option>
+                    <option value="fechado">Fechado</option>
+                    <option value="perdido">Perdido</option>
+                  </select>
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Prioridade</span>
+                  <select id="lead-prioridade">
+                    <option value="0">Baixa</option>
+                    <option value="1">Normal</option>
+                    <option value="2">Alta</option>
+                    <option value="3">Urgente</option>
+                  </select>
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Próximo contato</span>
+                  <input type="date" id="lead-proximo-contato">
+                </label>
+              </div>
+            </div>
+
+            <div class="lead-grupo" role="group" aria-labelledby="lead-grupo-procura">
+              <h4 class="lead-grupo__titulo" id="lead-grupo-procura">O que procura</h4>
+              <div class="grade-campos grade-campos--2">
+                <label class="campo">
+                  <span class="campo__rotulo">Finalidade</span>
+                  <select id="lead-finalidade">
+                    <option value="">Não informado</option>
+                    <option value="venda">Compra</option>
+                    <option value="aluguel">Aluguel</option>
+                  </select>
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Tipo de imóvel</span>
+                  <input type="text" id="lead-tipo" placeholder="Casa, apartamento, terreno">
+                </label>
+                <label class="campo campo--largo">
+                  <span class="campo__rotulo">Bairros ou regiões</span>
+                  <input type="text" id="lead-bairros" placeholder="Separe por vírgula">
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Preço mínimo</span>
+                  <input type="text" id="lead-preco-min" inputmode="decimal">
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Preço máximo</span>
+                  <input type="text" id="lead-preco-max" inputmode="decimal">
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Quartos mínimos</span>
+                  <input type="number" id="lead-quartos" min="0" max="30">
+                </label>
+              </div>
+            </div>
+
+            <div class="lead-grupo" role="group" aria-labelledby="lead-grupo-negocio">
+              <h4 class="lead-grupo__titulo" id="lead-grupo-negocio">Negociação</h4>
+              <div class="grade-campos grade-campos--2">
+                <label class="campo">
+                  <span class="campo__rotulo">Valor potencial</span>
+                  <input type="text" id="lead-valor-potencial" inputmode="decimal">
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Prazo</span>
+                  <input type="text" id="lead-prazo" placeholder="Ex: até dezembro">
+                </label>
+                <label class="campo">
+                  <span class="campo__rotulo">Pagamento</span>
+                  <input type="text" id="lead-financiamento" placeholder="Financiamento ou à vista">
+                </label>
+                <label class="campo campo--largo">
+                  <span class="campo__rotulo">Tags</span>
+                  <input type="text" id="lead-tags" placeholder="Ex: MCMV, investidor, retorno rápido">
+                </label>
+                <label class="campo campo--largo">
+                  <span class="campo__rotulo">Resumo</span>
+                  <textarea id="lead-resumo" rows="4" placeholder="O que este lead procura e o que já foi combinado"></textarea>
+                </label>
+                <label class="campo campo--largo" id="lead-motivo-perda-campo" hidden>
+                  <span class="campo__rotulo">Motivo da perda</span>
+                  <input type="text" id="lead-motivo-perda">
+                </label>
+              </div>
             </div>
           </form>
 

@@ -12,14 +12,19 @@ import { escapar, lerNumero, mascararMoeda } from './ui.js';
 const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
 const $$ = (seletor, raiz = document) => [...raiz.querySelectorAll(seletor)];
 
+// `forca` é a opacidade do vinho no trilho da coluna. Ela sobe do começo ao
+// fim do funil: quanto mais perto do fechamento, mais saturada a etapa. Isso dá
+// leitura de progresso usando UMA cor só, sem inventar um verde/azul que não
+// existe na marca (ver a regra travada em css/tokens.css). "Perdido" fica fora
+// da escala, em cinza, porque não é avanço.
 const ETAPAS = [
-  { id: 'novo', nome: 'Novos', icone: 'ph-inbox' },
-  { id: 'em_atendimento', nome: 'Em atendimento', icone: 'ph-chats-circle' },
-  { id: 'qualificado', nome: 'Qualificados', icone: 'ph-seal-check' },
-  { id: 'visita_agendada', nome: 'Visitas', icone: 'ph-calendar-check' },
-  { id: 'proposta', nome: 'Propostas', icone: 'ph-file-text' },
-  { id: 'fechado', nome: 'Fechados', icone: 'ph-key' },
-  { id: 'perdido', nome: 'Perdidos', icone: 'ph-archive' },
+  { id: 'novo', nome: 'Novos', icone: 'ph-inbox', forca: 0.22 },
+  { id: 'em_atendimento', nome: 'Em atendimento', icone: 'ph-chats-circle', forca: 0.36 },
+  { id: 'qualificado', nome: 'Qualificados', icone: 'ph-seal-check', forca: 0.5 },
+  { id: 'visita_agendada', nome: 'Visitas', icone: 'ph-calendar-check', forca: 0.66 },
+  { id: 'proposta', nome: 'Propostas', icone: 'ph-file-text', forca: 0.82 },
+  { id: 'fechado', nome: 'Fechados', icone: 'ph-key', forca: 1 },
+  { id: 'perdido', nome: 'Perdidos', icone: 'ph-archive', forca: 0 },
 ];
 
 const ETAPA_POR_ID = new Map(ETAPAS.map((etapa) => [etapa.id, etapa]));
@@ -115,6 +120,30 @@ function leadsDoPeriodo() {
   return snapshot.leads.filter((lead) => dentroDoPeriodo(lead.criado_em));
 }
 
+// A janela imediatamente anterior, do mesmo tamanho. É o que dá sentido ao
+// "+3" ao lado do número: 11 leads só quer dizer alguma coisa comparado com os
+// 8 da quinzena passada. Em "todo o histórico" não existe anterior, e aí o
+// painel simplesmente não mostra comparação em vez de inventar uma.
+function leadsDaJanelaAnterior() {
+  const inicio = inicioDoPeriodo();
+  if (!inicio) return null;
+  const dias = Number($('#crm-periodo')?.value ?? 30);
+  const comeco = new Date(inicio);
+  comeco.setDate(comeco.getDate() - dias);
+  return snapshot.leads.filter((lead) => {
+    const data = new Date(lead.criado_em);
+    return data >= comeco && data < inicio;
+  });
+}
+
+function monograma(nome) {
+  const partes = String(nome ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return '?';
+  const primeira = partes[0][0] ?? '';
+  const ultima = partes.length > 1 ? partes.at(-1)[0] ?? '' : '';
+  return (primeira + ultima).toUpperCase();
+}
+
 function leadsFiltrados() {
   const busca = textoSimples($('#crm-busca')?.value);
   const origem = $('#crm-origem')?.value ?? '';
@@ -171,30 +200,89 @@ function mediaPrimeiraResposta(leads) {
   return tempos.length ? tempos.reduce((soma, item) => soma + item, 0) / tempos.length : null;
 }
 
+// Compara com a janela anterior e devolve a marcação da variação. `bomSubir`
+// diz de que lado está a boa notícia: em "leads" subir é bom, em "primeira
+// resposta" subir é ruim. O vinho só aparece quando a notícia é ruim — é a
+// mesma semântica de atenção que o card atrasado já usa. Sem cor nova.
+function variacao(atual, anterior, { bomSubir = true, sufixo = '' } = {}) {
+  if (anterior == null || atual == null) return '';
+  const bruta = atual - anterior;
+  if (!Number.isFinite(bruta) || Math.abs(bruta) < 0.05) {
+    return '<span class="crm-kpi__delta crm-kpi__delta--igual">estável</span>';
+  }
+  const subiu = bruta > 0;
+  const ruim = subiu !== bomSubir;
+  const seta = subiu ? 'ph-arrow-up-right' : 'ph-arrow-down-right';
+  const texto = `${subiu ? '+' : '-'}${numeroCurto(Math.abs(bruta))}${sufixo}`;
+  return `
+    <span class="crm-kpi__delta${ruim ? ' crm-kpi__delta--atencao' : ''}">
+      <i class="ph ${seta}" aria-hidden="true"></i>${escapar(texto)}
+    </span>`;
+}
+
 function renderizarKPIs() {
   const leads = leadsDoPeriodo();
-  const fechados = leads.filter((lead) => lead.status === 'fechado').length;
-  const qualificados = leads.filter((lead) =>
+  const antes = leadsDaJanelaAnterior();
+  const qualificar = (lista) => lista.filter((lead) =>
     ['qualificado', 'visita_agendada', 'proposta', 'fechado'].includes(lead.status)).length;
-  const visitas = snapshot.visitas.filter((visita) => dentroDoPeriodo(visita.criado_em ?? visita.quando)).length;
-  const conversao = leads.length ? (fechados / leads.length) * 100 : 0;
-  const potencial = leads
+  const converter = (lista) => (lista.length
+    ? (lista.filter((lead) => lead.status === 'fechado').length / lista.length) * 100
+    : 0);
+  const somarPotencial = (lista) => lista
     .filter((lead) => STATUS_ATIVOS.has(lead.status))
     .reduce((soma, lead) => soma + Number(lead.valor_potencial ?? lead.imovel?.preco ?? 0), 0);
 
+  const visitas = snapshot.visitas.filter((visita) => dentroDoPeriodo(visita.criado_em ?? visita.quando)).length;
+  const resposta = mediaPrimeiraResposta(leads);
+  const potencial = somarPotencial(leads);
+
+  // Taxa em cima de amostra minúscula não é informação, é sorte: 1 lead que
+  // fechou vira "100% de conversão", e no período seguinte a queda pra 0%
+  // apareceria como um tombo de 100 pontos que nunca existiu. Abaixo de 3
+  // leads na janela anterior o painel prefere não comparar.
+  const comparavel = antes && antes.length >= 3;
+
   const itens = [
-    { icone: 'ph-user-plus', rotulo: 'Leads no período', valor: numeroCurto(leads.length) },
-    { icone: 'ph-seal-check', rotulo: 'Qualificados', valor: numeroCurto(qualificados) },
+    {
+      icone: 'ph-user-plus', rotulo: 'Leads no período', valor: numeroCurto(leads.length),
+      delta: variacao(leads.length, antes?.length, { bomSubir: true }),
+    },
+    {
+      icone: 'ph-seal-check', rotulo: 'Qualificados', valor: numeroCurto(qualificar(leads)),
+      delta: variacao(qualificar(leads), antes && qualificar(antes), { bomSubir: true }),
+    },
     { icone: 'ph-calendar-check', rotulo: 'Visitas', valor: numeroCurto(visitas) },
-    { icone: 'ph-trend-up', rotulo: 'Conversão', valor: `${conversao.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%` },
-    { icone: 'ph-timer', rotulo: 'Primeira resposta', valor: minutosLegiveis(mediaPrimeiraResposta(leads)) },
-    { icone: 'ph-currency-circle-dollar', rotulo: 'Potencial ativo', valor: potencial ? moedaCompacta(potencial) : 'Não informado' },
+    {
+      icone: 'ph-trend-up', rotulo: 'Conversão',
+      valor: `${converter(leads).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`,
+      // Diferença entre duas porcentagens é ponto percentual, não porcentagem.
+      // Escrever "-100%" numa queda de 100% pra 0% afirmaria outra coisa.
+      delta: comparavel
+        ? variacao(converter(leads), converter(antes), { bomSubir: true, sufixo: ' p.p.' })
+        : '',
+    },
+    {
+      icone: 'ph-timer', rotulo: 'Primeira resposta', valor: minutosLegiveis(resposta),
+      delta: comparavel
+        ? variacao(resposta, mediaPrimeiraResposta(antes), { bomSubir: false, sufixo: ' min' })
+        : '',
+    },
+    {
+      icone: 'ph-currency-circle-dollar', rotulo: 'Potencial ativo',
+      valor: potencial ? moedaCompacta(potencial) : 'Não informado',
+    },
   ];
 
-  $('#crm-kpis').innerHTML = itens.map((item) => `
-    <article class="crm-kpi">
-      <i class="ph ${item.icone}" aria-hidden="true"></i>
-      <div><strong>${escapar(item.valor)}</strong><span>${escapar(item.rotulo)}</span></div>
+  // A linha da variação é sempre renderizada, mesmo vazia. Sem isso as células
+  // com comparação teriam três linhas e as sem comparação duas, e os seis
+  // números deixariam de assentar na mesma base.
+  $('#crm-kpis').innerHTML = itens.map((item, indice) => `
+    <article class="crm-kpi" style="--i:${indice}">
+      <span class="crm-kpi__rotulo">
+        <i class="ph ${item.icone}" aria-hidden="true"></i>${escapar(item.rotulo)}
+      </span>
+      <strong class="crm-kpi__valor">${escapar(item.valor)}</strong>
+      <span class="crm-kpi__linha-delta">${item.delta || ''}</span>
     </article>`).join('');
 }
 
@@ -221,19 +309,145 @@ function construirBuckets() {
     const rotulo = configuracao.dias >= 30
       ? fim.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
       : fim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    return { total, rotulo };
+    const periodo = configuracao.dias === 1
+      ? formatarData(fim)
+      : `${formatarData(inicio)} a ${formatarData(fim)}`;
+    return { total, rotulo, periodo };
   });
+}
+
+// Curva suave por Catmull-Rom convertida em Bézier. Os pontos reais ficam
+// marcados com bolinha justamente porque a curva interpola: a bolinha é a
+// medição, o traço entre elas é só leitura.
+function caminhoSuave(pontos) {
+  if (pontos.length < 2) return '';
+  let d = `M ${pontos[0].x} ${pontos[0].y}`;
+  for (let i = 0; i < pontos.length - 1; i += 1) {
+    const p0 = pontos[i - 1] ?? pontos[i];
+    const p1 = pontos[i];
+    const p2 = pontos[i + 1];
+    const p3 = pontos[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
 }
 
 function renderizarGrafico() {
   const buckets = construirBuckets();
-  const maximo = Math.max(1, ...buckets.map((item) => item.total));
-  $('#crm-grafico').innerHTML = buckets.map((item) => `
-    <div class="crm-grafico__item" title="${item.total} lead${item.total === 1 ? '' : 's'}">
-      <span class="crm-grafico__numero">${item.total || ''}</span>
-      <span class="crm-grafico__barra" style="--altura:${Math.max(item.total ? 10 : 2, (item.total / maximo) * 100)}%"></span>
-      <span class="crm-grafico__rotulo">${escapar(item.rotulo)}</span>
-    </div>`).join('');
+  const alvo = $('#crm-grafico');
+  if (!alvo) return;
+
+  const total = buckets.reduce((soma, item) => soma + item.total, 0);
+  if (!total) {
+    alvo.innerHTML = `
+      <div class="crm-grafico__vazio">
+        <i class="ph ph-chart-line" aria-hidden="true"></i>
+        <p>Nenhum lead entrou neste período.</p>
+        <span>Assim que chegar uma mensagem, a curva começa aqui.</span>
+      </div>`;
+    return;
+  }
+
+  // Teto arredondado pra cima até um número par. Par importa porque a linha do
+  // meio é rotulada com teto/2: com teto 3 a grade do meio valia 1,5 e o eixo
+  // escrevia "2" ali, afirmando uma medida que não é a daquela linha.
+  const pico = Math.max(1, ...buckets.map((item) => item.total));
+  const teto = pico <= 4 ? pico + (pico % 2) : Math.ceil(pico / 10) * 10;
+  const largura = 100;
+  const altura = 100;
+  // Margem lateral pra a primeira e a última bolinha caberem inteiras dentro
+  // da tela. Sem ela os pontos das pontas nascem em x=0 e x=100 e metade de
+  // cada um fica fora do recorte.
+  const margem = 2;
+  const util = largura - margem * 2;
+  const passo = buckets.length > 1 ? util / (buckets.length - 1) : 0;
+  const pontos = buckets.map((item, indice) => ({
+    x: buckets.length > 1 ? margem + indice * passo : largura / 2,
+    y: altura - (item.total / teto) * (altura - 6) - 3,
+    ...item,
+  }));
+
+  const linha = caminhoSuave(pontos);
+  const area = linha
+    ? `${linha} L ${pontos.at(-1).x.toFixed(2)} ${altura} L ${pontos[0].x.toFixed(2)} ${altura} Z`
+    : '';
+  const grades = [0, 0.5, 1].map((fracao) => {
+    const y = 3 + (altura - 6) * fracao;
+    return `<line class="crm-grafico__grade" x1="0" y1="${y.toFixed(2)}" x2="${largura}" y2="${y.toFixed(2)}"></line>`;
+  }).join('');
+
+  alvo.innerHTML = `
+    <div class="crm-grafico__escala" aria-hidden="true">
+      <span>${numeroCurto(teto)}</span><span>${numeroCurto(Math.round(teto / 2))}</span><span>0</span>
+    </div>
+    <div class="crm-grafico__tela">
+      <svg class="crm-grafico__svg" viewBox="0 0 ${largura} ${altura}"
+           preserveAspectRatio="none" role="img"
+           aria-label="Entrada de leads ao longo do período: ${total} no total">
+        <defs>
+          <linearGradient id="crm-veu" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--vermelho)" stop-opacity="0.28"></stop>
+            <stop offset="100%" stop-color="var(--vermelho)" stop-opacity="0.02"></stop>
+          </linearGradient>
+        </defs>
+        ${grades}
+        ${area ? `<path class="crm-grafico__area" d="${area}" fill="url(#crm-veu)"></path>` : ''}
+        ${linha ? `<path class="crm-grafico__linha" d="${linha}" vector-effect="non-scaling-stroke"></path>` : ''}
+      </svg>
+      <div class="crm-grafico__marcas" style="--passo:${(passo || 100).toFixed(2)}%">
+        ${pontos.map((ponto) => `
+          <button class="crm-grafico__marca" type="button"
+                  style="--x:${ponto.x.toFixed(2)}%;--y:${ponto.y.toFixed(2)}%"
+                  data-total="${ponto.total}" data-periodo="${escapar(ponto.periodo)}">
+            <span class="sr-only">${ponto.total} lead${ponto.total === 1 ? '' : 's'} em ${escapar(ponto.periodo)}</span>
+          </button>`).join('')}
+      </div>
+      <div class="crm-grafico__balao" id="crm-grafico-balao" hidden aria-hidden="true"></div>
+    </div>
+    <div class="crm-grafico__eixo" aria-hidden="true">
+      ${pontos.map((ponto) => `<span>${escapar(ponto.rotulo)}</span>`).join('')}
+    </div>`;
+
+  // O traço "se desenhando" precisa do comprimento real da curva: com um valor
+  // chutado no CSS a linha ficaria invisível durante quase toda a animação e
+  // apareceria de supetão no fim. getTotalLength() devolve isso em unidades do
+  // viewBox, que é exatamente onde o stroke-dasharray vive.
+  const traco = $('.crm-grafico__linha', alvo);
+  if (traco) traco.style.setProperty('--traco', traco.getTotalLength().toFixed(1));
+
+  ligarBalaoDoGrafico(alvo);
+}
+
+// Tooltip próprio em vez de `title`: o nativo demora um segundo pra aparecer e
+// some no meio do movimento do mouse, que é justamente quando o corretor está
+// varrendo a curva pra achar o dia cheio.
+function ligarBalaoDoGrafico(raiz) {
+  const balao = $('#crm-grafico-balao', raiz);
+  const tela = $('.crm-grafico__tela', raiz);
+  if (!balao || !tela) return;
+
+  const mostrar = (marca) => {
+    const total = Number(marca.dataset.total);
+    balao.innerHTML = `<strong>${numeroCurto(total)} lead${total === 1 ? '' : 's'}</strong>
+      <span>${escapar(marca.dataset.periodo)}</span>`;
+    // A marca é deslocada por translateX(-50%), então o centro visual dela
+    // cai exatamente em offsetLeft. Somar metade da largura erraria o alvo.
+    balao.style.setProperty('--x', `${marca.offsetLeft}px`);
+    balao.style.setProperty('--y', marca.style.getPropertyValue('--y'));
+    balao.hidden = false;
+  };
+  const esconder = () => { balao.hidden = true; };
+
+  for (const marca of $$('.crm-grafico__marca', raiz)) {
+    marca.addEventListener('pointerenter', () => mostrar(marca));
+    marca.addEventListener('focus', () => mostrar(marca));
+    marca.addEventListener('blur', esconder);
+  }
+  tela.addEventListener('pointerleave', esconder);
 }
 
 function renderizarOrigens() {
@@ -246,15 +460,16 @@ function renderizarOrigens() {
     return;
   }
   const maior = Math.max(...itens.map(([, total]) => total), 1);
-  $('#crm-origens').innerHTML = itens.map(([origem, total]) => {
+  $('#crm-origens').innerHTML = itens.map(([origem, total], indice) => {
     const info = ORIGENS[origem] ?? { nome: origem, icone: 'ph-chat-circle' };
     const porcentagem = leads.length ? Math.round((total / leads.length) * 100) : 0;
     return `
-      <div class="crm-origem">
+      <div class="crm-origem" style="--i:${indice}">
         <i class="ph ${info.icone}" aria-hidden="true"></i>
-        <span>${escapar(info.nome)}</span>
+        <span class="crm-origem__nome">${escapar(info.nome)}</span>
+        <strong class="crm-origem__total">${total}</strong>
+        <span class="crm-origem__porcento">${porcentagem}%</span>
         <span class="crm-origem__linha"><i style="--largura:${(total / maior) * 100}%"></i></span>
-        <strong>${total} <small>${porcentagem}%</small></strong>
       </div>`;
   }).join('');
 }
@@ -284,46 +499,67 @@ function interesseDo(lead) {
   return partes.join(' | ') || 'Perfil ainda não informado';
 }
 
-function cardDoLead(lead) {
+function cardDoLead(lead, indice = 0) {
   const origem = ORIGENS[lead.origem] ?? { nome: lead.origem, icone: 'ph-chat-circle' };
   const atrasado = retornoAtrasado(lead);
   const pendentes = naoLidas(lead.id);
   const prioridade = Number(lead.prioridade ?? 1);
+  const telefone = telefoneLimpo(lead);
   return `
     <article class="lead-card lead-card--p${prioridade}${atrasado ? ' lead-card--atrasado' : ''}"
-             draggable="true" tabindex="0" data-lead-id="${escapar(lead.id)}"
+             draggable="true" tabindex="0" data-lead-id="${escapar(lead.id)}" style="--i:${indice}"
              aria-label="Abrir ficha de ${escapar(lead.nome ?? 'lead sem nome')}">
       <div class="lead-card__topo">
-        <span class="lead-card__origem"><i class="ph ${origem.icone}" aria-hidden="true"></i>${escapar(origem.nome)}</span>
-        ${pendentes ? `<span class="lead-card__nao-lidas" title="Mensagens não lidas">${pendentes}</span>` : ''}
+        <span class="lead-card__avatar" aria-hidden="true">${escapar(monograma(lead.nome))}</span>
+        <span class="lead-card__identidade">
+          <strong class="lead-card__nome">${escapar(lead.nome || 'Sem nome')}</strong>
+          <span class="lead-card__origem"><i class="ph ${origem.icone}" aria-hidden="true"></i>${escapar(origem.nome)}</span>
+        </span>
+        ${pendentes ? `<span class="lead-card__nao-lidas" title="${pendentes} mensagem${pendentes === 1 ? '' : 's'} sem ler">${pendentes}</span>` : ''}
       </div>
-      <strong class="lead-card__nome">${escapar(lead.nome || 'Sem nome')}</strong>
       <p class="lead-card__interesse">${escapar(interesseDo(lead))}</p>
       ${lead.tags?.length ? `<div class="lead-card__tags">${lead.tags.slice(0, 2).map((tag) => `<span>${escapar(tag)}</span>`).join('')}</div>` : ''}
       <div class="lead-card__rodape">
         <span>${escapar(tempoRelativo(ultimaAtividade(lead)))}</span>
         ${atrasado
-          ? '<span class="lead-card__retorno"><i class="ph ph-warning" aria-hidden="true"></i>Retornar</span>'
+          ? '<span class="lead-card__retorno"><i class="ph ph-warning-circle" aria-hidden="true"></i>Retornar</span>'
           : `<span>${escapar(PRIORIDADES[prioridade] ?? 'Normal')}</span>`}
       </div>
+      ${telefone
+        ? `<a class="lead-card__zap" href="https://wa.me/${escapar(telefone)}" target="_blank" rel="noopener"
+              title="Abrir conversa no WhatsApp" aria-label="Abrir conversa de ${escapar(lead.nome ?? 'lead')} no WhatsApp">
+             <i class="ph ph-whatsapp-logo" aria-hidden="true"></i>
+           </a>`
+        : ''}
     </article>`;
 }
 
 function renderizarFunil() {
   const leads = leadsFiltrados();
+  const filtrando = Boolean($('#crm-busca')?.value.trim())
+    || Boolean($('#crm-origem')?.value)
+    || Boolean($('#crm-atrasados')?.checked);
   $('#crm-contagem').textContent = `${leads.length} lead${leads.length === 1 ? '' : 's'} no funil`;
-  $('#crm-funil').innerHTML = ETAPAS.map((etapa) => {
+
+  $('#crm-funil').innerHTML = ETAPAS.map((etapa, coluna) => {
     const itens = leads.filter((lead) => lead.status === etapa.id);
     const valor = itens.reduce((soma, lead) => soma + Number(lead.valor_potencial ?? 0), 0);
     return `
-      <section class="funil-coluna" data-etapa="${etapa.id}" aria-labelledby="etapa-${etapa.id}">
+      <section class="funil-coluna" data-etapa="${etapa.id}" style="--forca:${etapa.forca};--i:${coluna}"
+               aria-labelledby="etapa-${etapa.id}">
         <header class="funil-coluna__topo">
-          <div><i class="ph ${etapa.icone}" aria-hidden="true"></i><h4 id="etapa-${etapa.id}">${etapa.nome}</h4></div>
-          <span>${itens.length}</span>
+          <i class="ph ${etapa.icone}" aria-hidden="true"></i>
+          <h4 id="etapa-${etapa.id}">${etapa.nome}</h4>
+          <span class="funil-coluna__contagem">${itens.length}</span>
         </header>
         <p class="funil-coluna__valor">${valor ? moeda(valor) : 'Sem valor informado'}</p>
         <div class="funil-coluna__corpo" data-soltar="${etapa.id}">
-          ${itens.length ? itens.map(cardDoLead).join('') : '<p class="funil-coluna__vazio">Solte um lead aqui</p>'}
+          ${itens.length
+            ? itens.map((lead, indice) => cardDoLead(lead, indice)).join('')
+            : `<p class="funil-coluna__vazio">
+                 <i class="ph ${filtrando ? 'ph-funnel' : 'ph-hand-grabbing'}" aria-hidden="true"></i>
+                 ${filtrando ? 'Nada nesta etapa com os filtros de agora' : 'Arraste um lead até aqui'}
+               </p>`}
         </div>
       </section>`;
   }).join('');
@@ -354,11 +590,23 @@ function mostrarRecadoLead(texto, tipo = 'ok') {
   alvo.hidden = false;
 }
 
+// O esqueleto imita a forma final (6 células, curva, 5 colunas com cards) em
+// vez de um retângulo genérico: assim a página não pula quando os dados chegam.
 function mostrarCarregando() {
-  $('#crm-kpis').innerHTML = '<div class="esqueleto crm-kpi"></div>'.repeat(6);
-  $('#crm-grafico').innerHTML = '<div class="esqueleto" style="height:12rem"></div>';
-  $('#crm-origens').innerHTML = '<div class="esqueleto" style="height:12rem"></div>';
-  $('#crm-funil').innerHTML = '<div class="esqueleto funil-coluna"></div>'.repeat(4);
+  $('#crm-kpis').innerHTML = `
+    <article class="crm-kpi crm-kpi--esqueleto">
+      <span class="esqueleto esqueleto--rotulo"></span>
+      <span class="esqueleto esqueleto--numero"></span>
+    </article>`.repeat(6);
+  $('#crm-grafico').innerHTML = '<div class="esqueleto esqueleto--curva"></div>';
+  $('#crm-origens').innerHTML = `
+    <div class="crm-origem crm-origem--esqueleto"><span class="esqueleto"></span></div>`.repeat(5);
+  $('#crm-funil').innerHTML = `
+    <section class="funil-coluna funil-coluna--esqueleto">
+      <span class="esqueleto esqueleto--rotulo"></span>
+      <span class="esqueleto esqueleto--lead"></span>
+      <span class="esqueleto esqueleto--lead"></span>
+    </section>`.repeat(5);
 }
 
 function exportarCSV() {
@@ -870,10 +1118,14 @@ function ligarEventos() {
   $('#crm-novo-lead').addEventListener('click', abrirNovoLead);
 
   $('#crm-funil').addEventListener('click', (evento) => {
+    // O atalho do WhatsApp mora dentro do card. Sem esta saída, clicar nele
+    // abriria a conversa E a ficha por cima dela.
+    if (evento.target.closest('.lead-card__zap')) return;
     const card = evento.target.closest('[data-lead-id]');
     if (card) abrirLead(card.dataset.leadId);
   });
   $('#crm-funil').addEventListener('keydown', (evento) => {
+    if (evento.target.closest('.lead-card__zap')) return;
     const card = evento.target.closest('[data-lead-id]');
     if (card && (evento.key === 'Enter' || evento.key === ' ')) {
       evento.preventDefault();

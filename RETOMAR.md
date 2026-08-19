@@ -6,6 +6,65 @@
 
 ---
 
+## 19/AGO - Painel redesenhado e 4 defeitos corrigidos
+
+Passada de design em cima do painel inteiro, preservando a identidade travada
+em `css/tokens.css`: vinho e dourado, tema claro único, raio 18/12/pílula.
+Nenhuma cor nova entrou.
+
+O que mudou no visual:
+
+- escala tipográfica própria do painel (`--p-numero` a `--p-nano`): o número do
+  KPI virou o herói da célula, com algarismo tabular e rótulo em caixa alta;
+- KPI agora compara com a janela anterior de mesmo tamanho ("+9", "estável").
+  Vinho só quando a notícia é ruim, que é a mesma semântica de atenção que o
+  card atrasado já usava;
+- gráfico de entrada virou área com curva suave, grade, eixo e balão próprio no
+  hover/foco. As barras finas com o número em cima saíram: em série de contagem
+  baixa o formato informa, o valor por coluna era ruído;
+- abas viraram controle segmentado; funil ganhou trilho por etapa com o vinho
+  saturando do "Novos" até o "Fechados", máscara nas bordas avisando que há
+  coluna fora da tela, e colunas de altura igual (alvo de soltura maior);
+- card de lead ganhou monograma, nome sem corte e atalho de WhatsApp;
+- ficha do lead: 18 campos soltos viraram três grupos ("Quem é", "O que
+  procura", "Negociação");
+- movimento curto e motivado, todo dentro de `prefers-reduced-motion:
+  no-preference`. Sem laço infinito e sem número contando de zero.
+
+Quatro defeitos reais achados e corrigidos no caminho:
+
+1. **Modais nasciam no canto superior esquerdo.** O `* { margin: 0 }` do
+   `site.css` atropelava o `margin: auto` que o navegador usa pra centralizar
+   `<dialog>` aberto por `showModal()`. Passava despercebido na ficha, que é
+   quase do tamanho da tela; no "Novo lead" era gritante. Corrigido com
+   `dialog:modal { margin: auto }`.
+2. **A grade da ficha caía pra uma coluna só** por 9 pixels: a coluna dá 519px
+   úteis e `minmax(16rem, 1fr)` pedia 528px pras duas. Além disso
+   `grid-column: 1 / -1` do `.campo--largo` não funciona com `repeat(auto-fit)`,
+   porque com contagem indefinida a linha `-1` não resolve. Virou grade de duas
+   colunas explícitas.
+3. **O eixo do gráfico mentia**: com pico 3 a linha do meio valia 1,5 e o rótulo
+   escrevia "2". O teto agora arredonda pra número par.
+4. **Comparação de conversão em amostra minúscula.** 1 lead fechado virava
+   "100%", e a queda pro período seguinte aparecia como tombo de 100 pontos que
+   nunca existiu. Abaixo de 3 leads na janela anterior o painel não compara. E
+   diferença entre porcentagens agora é rotulada em p.p., não em %.
+
+Conferido em produção em 19/08: backend responde `{"agente":"aioti","crm":true,
+"ok":true}`; a rota `/manychat/ah_imobiliaria` existe e recusa sem o segredo
+(401); as tabelas `leads`, `lead_interacoes`, `visitas` e `configuracoes_ia`
+respondem e devolvem vazio pro visitante anônimo (RLS de pé); 7 imóveis
+publicados no catálogo.
+
+Testado no navegador em 1440px e 390px, modo local, com 13 leads de mentira:
+funil arrastado entre etapas, ficha aberta, balão do gráfico, modal de novo
+lead, console limpo. **O caminho da nuvem foi verificado só até a tela de
+login** — carrega sem erro, mas não entrei na conta.
+
+Pendência externa continua sendo uma só: o fluxo do ManyChat.
+
+---
+
 ## 18/AGO - CRM de leads implementado e publicado
 
 O painel ganhou uma aba **Leads e funil** com estatísticas reais, funil

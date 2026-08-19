@@ -1,7 +1,29 @@
 /* ==========================================================================
    Painel do corretor. Ferramenta de trabalho, não peça de marketing:
-   densidade maior, zero animação de entrada, tudo à mão.
+   densidade maior que a do site, tudo à mão, nenhuma cor fora da marca.
+
+   O movimento aqui é curto e SEMPRE motivado: entrada escalonada pra dizer
+   "isto acabou de carregar e está completo", desenho da curva pra o olho
+   voltar ao gráfico quando o período muda, resposta ao arraste. Nada de laço
+   infinito e nada de número contando de zero — quem passa o dia nesta tela
+   recarrega dezenas de vezes, e KPI pulando a cada carga é ruído, não
+   informação. Tudo colapsa sob prefers-reduced-motion, no fim do arquivo.
    ========================================================================== */
+
+:root {
+  /* Escala tipográfica do painel. Existe porque o CRM tinha 14 tamanhos
+     entre 0,62 e 1,35rem e nenhum deles mandava em ninguém: número de KPI e
+     texto corrido pesavam igual. Aqui o número é o herói. */
+  --p-numero: clamp(1.75rem, 2.4vw, 2.35rem);
+  --p-titulo: 1.05rem;
+  --p-corpo: 0.86rem;
+  --p-micro: 0.72rem;
+  --p-nano: 0.66rem;
+
+  /* Altura única pra todo controle de filtro. Antes a busca tinha 42px e os
+     selects tinham outra coisa, e a barra ficava com os ombros tortos. */
+  --p-controle: 2.75rem;
+}
 
 .admin { padding-block: 6.5rem 4rem; }
 
@@ -13,7 +35,10 @@
   gap: 1rem;
   margin-bottom: 2rem;
 }
-.admin__topo h1 { font-size: 1.7rem; }
+.admin__topo h1 {
+  font-size: clamp(1.6rem, 2.4vw, 2rem);
+  letter-spacing: -0.02em;
+}
 .admin__usuario { font-size: 0.88rem; color: var(--tinta-fraca); }
 
 /* --------------------------------------------------------------- login ---- */
@@ -30,30 +55,51 @@
   border-radius: var(--r-card);
   box-shadow: var(--sombra);
 }
-.login h1 { font-size: 1.4rem; }
+.login h1 { font-size: 1.5rem; letter-spacing: -0.02em; }
 .login p { font-size: 0.92rem; color: var(--tinta-media); }
-.login .btn { width: 100%; }
+.login .btn { width: 100%; margin-top: 0.25rem; }
+/* O painel abre pelo atalho na tela inicial do celular, sem barra de endereço:
+   sem a marca aqui, a tela de senha não diz de quem ela é. */
+.login__marca {
+  width: 3.25rem;
+  height: 3.25rem;
+  justify-self: center;
+  margin-bottom: -0.25rem;
+}
 
 /* --------------------------------------------------------------- abas ---- */
 
+/* Controle segmentado num trilho champanhe, no lugar do sublinhado solto de
+   antes. A aba ativa vira uma superfície erguida: dá pra ver de longe onde
+   você está, que é o que importa num painel usado no celular em pé na rua. */
 .abas {
-  display: flex;
-  gap: 0.35rem;
+  display: inline-flex;
+  gap: 0.2rem;
   margin-bottom: 1.75rem;
-  border-bottom: 1px solid var(--linha);
+  padding: 0.25rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-btn);
+  background: var(--bg-fundo);
 }
 .aba {
-  padding: 0.7rem 1.1rem;
+  padding: 0.55rem 1.15rem;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--r-btn);
   background: none;
-  color: var(--tinta-fraca);
+  color: var(--tinta-media);
   font-family: var(--fonte-display);
-  font-size: 0.96rem;
-  transition: color var(--rapido), border-color var(--rapido);
+  font-size: 0.92rem;
+  white-space: nowrap;
+  transition: color var(--rapido), background var(--rapido), box-shadow var(--rapido);
 }
-.aba:hover { color: var(--tinta); }
-.aba[aria-selected='true'] { color: var(--vermelho); border-bottom-color: var(--vermelho); }
+.aba:hover { color: var(--tinta); background: color-mix(in srgb, var(--bg-alto) 70%, transparent); }
+.aba:active { transform: scale(0.985); }
+.aba[aria-selected='true'] {
+  background: var(--bg-alto);
+  color: var(--vermelho);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(23, 18, 15, 0.05), 0 6px 16px -12px rgba(23, 18, 15, 0.4);
+}
 
 .sr-only {
   position: absolute;
@@ -90,42 +136,64 @@
   font-size: 0.86rem;
 }
 
+/* ------------------------------------------------------------ filtros ---- */
+
 .crm-filtros {
   display: grid;
-  grid-template-columns: minmax(17rem, 1fr) auto auto auto auto auto;
+  grid-template-columns: minmax(15rem, 1fr) auto auto auto auto auto;
   align-items: end;
-  gap: 0.75rem;
-  padding: 0.9rem;
+  gap: 0.6rem;
+  padding: 0.75rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-card);
   background: var(--bg-alto);
+  box-shadow: var(--sombra);
 }
+/* Respiro antes das duas ações: filtrar e executar não são a mesma coisa, e
+   sem esta folga os seis controles viram uma régua contínua. */
+.crm-filtros #crm-atualizar { margin-left: 0.4rem; }
 .campo--compacto { min-width: 9.5rem; }
-.campo--compacto .campo__rotulo { font-size: 0.72rem; }
-.campo--compacto select { min-height: 42px; padding-block: 0.45rem; }
+.campo--compacto .campo__rotulo {
+  font-size: var(--p-nano);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+.campo--compacto select {
+  min-height: var(--p-controle);
+  padding-block: 0.45rem;
+}
 .crm-busca {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  min-height: 42px;
-  padding-inline: 0.8rem;
+  min-height: var(--p-controle);
+  padding-inline: 0.85rem;
   border: 1px solid var(--linha-forte);
   border-radius: var(--r-campo);
   background: var(--bg);
   color: var(--tinta-fraca);
+  transition: border-color var(--rapido), box-shadow var(--rapido);
 }
 .crm-busca:focus-within {
   border-color: var(--vermelho);
   box-shadow: 0 0 0 3px var(--vermelho-fraco);
 }
+.crm-busca:focus-within > .ph { color: var(--vermelho); }
+.crm-busca > .ph { transition: color var(--rapido); }
 .crm-busca input {
   width: 100%;
   min-width: 0;
   border: 0;
   outline: 0;
   background: transparent;
+  color: var(--tinta);
+  font-size: 0.92rem;
 }
-.crm-filtros__atrasados { min-height: 42px; white-space: nowrap; }
+.crm-filtros__atrasados { min-height: var(--p-controle); white-space: nowrap; }
+.crm-filtros .btn-mini { min-height: var(--p-controle); }
+
+/* ---------------------------------------------------------------- KPIs ---- */
 
 .crm-kpis {
   display: grid;
@@ -133,46 +201,87 @@
   border: 1px solid var(--linha);
   border-radius: var(--r-card);
   background: var(--bg-alto);
+  box-shadow: var(--sombra);
   overflow: hidden;
 }
+/* Rótulo em cima, número grande embaixo, variação ao lado. O ícone virou
+   marca-d'água no canto: ele identifica a célula de relance sem disputar
+   atenção com o número, que é a única coisa que se lê de longe. */
 .crm-kpi {
-  min-height: 7rem;
+  position: relative;
+  min-height: 7.25rem;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
   align-content: center;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0.3rem;
+  padding: 1.1rem 1.15rem;
   border-right: 1px solid var(--linha);
+  overflow: hidden;
 }
 .crm-kpi:last-child { border-right: 0; }
-.crm-kpi > .ph {
-  width: 2rem;
-  height: 2rem;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--vermelho-fraco);
-  color: var(--vermelho);
-  font-size: 1.05rem;
+.crm-kpi__rotulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--tinta-fraca);
+  font-size: var(--p-nano);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
-.crm-kpi div { min-width: 0; }
-.crm-kpi strong {
+/* O ícone acompanha o rótulo em vez de virar marca-d'água gigante no canto:
+   ampliado a 3rem e cortado pela borda da célula ele parecia defeito de
+   renderização, não decoração. Pequeno e ao lado do texto ele faz o que
+   precisa, que é dar um alvo de varredura pro olho. */
+.crm-kpi__rotulo .ph {
+  flex: 0 0 auto;
+  color: var(--vermelho);
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+/* Reservada mesmo quando não há comparação, pra os seis números ficarem na
+   mesma linha de base. */
+.crm-kpi__linha-delta { min-height: 1.1rem; }
+.crm-kpi__valor {
   display: block;
   overflow: hidden;
   color: var(--tinta);
   font-family: var(--fonte-display);
-  font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+  font-size: var(--p-numero);
   font-weight: 600;
-  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.crm-kpi span { color: var(--tinta-fraca); font-size: 0.75rem; }
+.crm-kpi__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  width: fit-content;
+  color: var(--tinta-media);
+  font-size: var(--p-micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.crm-kpi__delta .ph { font-size: 0.8rem; }
+/* Vinho só na notícia ruim. É a mesma semântica de atenção que o card
+   atrasado já usava; nenhuma cor nova entrou na marca por causa de gráfico. */
+.crm-kpi__delta--atencao { color: var(--vermelho); }
+.crm-kpi__delta--igual { color: var(--tinta-fraca); font-weight: 400; }
 
+.crm-kpi--esqueleto { gap: 0.6rem; }
+.esqueleto--rotulo { height: 0.7rem; width: 60%; border-radius: var(--r-btn); }
+.esqueleto--numero { height: 1.9rem; width: 45%; border-radius: var(--r-campo); }
+.esqueleto--curva { height: 13rem; }
+.esqueleto--lead { height: 5.5rem; border-radius: var(--r-campo); }
+
+/* O painel da IA precisa de largura mínima maior que os outros dois: dentro
+   dele mora um <select> com "Responder automaticamente", e num espaço menor
+   que isto o Chrome corta a opção no meio da palavra. */
 .crm-resumo {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(15rem, 0.85fr) minmax(17rem, 0.9fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(14rem, 0.8fr) minmax(19.5rem, 0.9fr);
   gap: 1rem;
 }
 .crm-painel {
@@ -180,68 +289,201 @@
   display: grid;
   align-content: start;
   gap: 1rem;
-  padding: 1.15rem;
+  padding: 1.25rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-card);
   background: var(--bg-alto);
+  box-shadow: var(--sombra);
 }
 .crm-painel h3,
 .crm-funil-topo h3,
-.lead-secao-topo h3 { font-size: 1rem; }
+.lead-secao-topo h3 {
+  font-size: var(--p-titulo);
+  letter-spacing: -0.01em;
+}
 
+/* ------------------------------------------------------------ gráfico ---- */
+
+/* Área com curva no lugar dos espetos de antes. As barras finas mediam 1,4rem
+   e o número em cima de cada uma (1, 1, 2, 1...) era ruído: numa série de
+   contagem baixa o que importa é o formato, não o valor de cada coluna. O
+   valor exato agora sai no balão, sob demanda. */
 .crm-grafico {
-  height: 12rem;
-  display: flex;
-  align-items: end;
-  gap: clamp(0.2rem, 0.65vw, 0.55rem);
-  padding-top: 1rem;
-  border-bottom: 1px solid var(--linha-forte);
-}
-.crm-grafico__item {
-  height: 100%;
-  min-width: 0;
-  flex: 1;
   display: grid;
-  grid-template-rows: 1rem minmax(0, 1fr) 1.4rem;
-  align-items: end;
-  justify-items: center;
-  gap: 0.3rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 13rem auto;
+  gap: 0.5rem 0.7rem;
 }
-.crm-grafico__numero,
-.crm-grafico__rotulo { color: var(--tinta-fraca); font-size: 0.66rem; }
-.crm-grafico__barra {
-  width: min(100%, 1.4rem);
-  height: var(--altura);
-  min-height: 2px;
-  border-radius: 4px 4px 0 0;
-  background: var(--vermelho);
-  transition: height var(--medio), opacity var(--rapido);
+.crm-grafico__escala {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-block: 0.1rem;
+  color: var(--tinta-fraca);
+  font-size: var(--p-nano);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
-.crm-grafico__item:hover .crm-grafico__barra { opacity: 0.72; }
+.crm-grafico__tela { position: relative; min-width: 0; }
+.crm-grafico__svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.crm-grafico__grade {
+  stroke: var(--linha);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.crm-grafico__linha {
+  fill: none;
+  stroke: var(--vermelho);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Alvos de mouse, uma coluna por medição, e é aqui que mora a bolinha do
+   ponto. Ela É um elemento HTML e não um <circle> de propósito: o SVG usa
+   preserveAspectRatio="none" pra a curva preencher a largura toda, e isso
+   esticaria qualquer círculo dentro dele numa elipse deitada.
+   Botão de verdade em vez de div pra o corretor percorrer a curva no Tab e o
+   leitor de tela ler "3 leads em 19/08" sem enxergar o desenho. */
+/* Cada marca é centrada no X exato da sua medição, não distribuída por flex:
+   com colunas de largura igual o ponto 0 fica em 0% e a coluna 0 no meio de
+   [0, 1/n], e a bolinha ia caindo pro lado errado conforme a série cresce.
+   O recorte aqui segura as metades que sobram nas pontas; o balão é irmão
+   desta caixa, então continua podendo escapar pra cima. */
+.crm-grafico__marcas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.crm-grafico__marca {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--x);
+  width: var(--passo);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+.crm-grafico__marca::before {
+  content: '';
+  position: absolute;
+  top: var(--y);
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border: 2px solid var(--vermelho);
+  border-radius: 50%;
+  background: var(--bg-alto);
+  transform: translate(-50%, -50%);
+  transition: transform var(--rapido);
+}
+.crm-grafico__marca:hover::before,
+.crm-grafico__marca:focus-visible::before { transform: translate(-50%, -50%) scale(1.35); }
+.crm-grafico__marca::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  left: 50%;
+  background: var(--dourado-fio);
+  opacity: 0;
+  transition: opacity var(--rapido);
+}
+.crm-grafico__marca:hover::after,
+.crm-grafico__marca:focus-visible::after { opacity: 1; }
+.crm-grafico__marca:focus-visible { outline: 0; }
+.crm-grafico__marca:focus-visible::before { border-color: var(--tinta); }
+.crm-grafico__balao {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: var(--z-flutuante);
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--dourado-fio);
+  border-radius: var(--r-campo);
+  background: var(--bg-alto);
+  box-shadow: var(--sombra);
+  transform: translate(-50%, calc(-100% - 0.6rem));
+  white-space: nowrap;
+  pointer-events: none;
+}
+.crm-grafico__balao strong {
+  font-size: var(--p-corpo);
+  font-variant-numeric: tabular-nums;
+}
+.crm-grafico__balao span { color: var(--tinta-fraca); font-size: var(--p-nano); }
+.crm-grafico__eixo {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  color: var(--tinta-fraca);
+  font-size: var(--p-nano);
+}
+/* Primeira e última datas encostam na borda da tela; puxo elas pra dentro
+     pra não ficarem cortadas nem coladas na moldura. */
+.crm-grafico__eixo span:first-child { transform: translateX(-0.15rem); }
+.crm-grafico__eixo span:last-child { transform: translateX(0.15rem); }
+.crm-grafico__vazio {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.4rem;
+  min-height: 13rem;
+  padding: 1rem;
+  border: 1px dashed var(--linha-forte);
+  border-radius: var(--r-campo);
+  text-align: center;
+}
+.crm-grafico__vazio .ph { font-size: 1.7rem; color: var(--dourado); }
+.crm-grafico__vazio p { font-size: var(--p-corpo); color: var(--tinta-media); }
+.crm-grafico__vazio span { font-size: var(--p-micro); color: var(--tinta-fraca); }
 
-.crm-origens { display: grid; gap: 0.85rem; }
+/* ------------------------------------------------------------ origens ---- */
+
+/* A barra era um fio de 2px em dourado: sumia contra o champanhe. Agora tem
+   corpo, o trilho é visível e a contagem alinha em coluna própria. */
+.crm-origens { display: grid; gap: 0.95rem; }
 .crm-origem {
   display: grid;
-  grid-template-columns: 1.25rem minmax(5rem, auto) minmax(2rem, 1fr) auto;
+  grid-template-columns: 1.15rem minmax(4rem, 1fr) auto 2.4rem;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 0.8rem;
+  gap: 0.3rem 0.55rem;
+  font-size: var(--p-corpo);
 }
 .crm-origem > .ph { color: var(--vermelho); font-size: 1rem; }
+.crm-origem__nome { color: var(--tinta-media); }
+.crm-origem__total { font-variant-numeric: tabular-nums; text-align: right; }
+.crm-origem__porcento {
+  color: var(--tinta-fraca);
+  font-size: var(--p-micro);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
 .crm-origem__linha {
-  height: 2px;
-  background: var(--linha);
+  grid-column: 2 / -1;
+  height: 6px;
+  border-radius: var(--r-btn);
+  background: var(--bg-fundo);
   overflow: hidden;
 }
 .crm-origem__linha i {
   display: block;
   width: var(--largura);
   height: 100%;
-  background: var(--dourado);
+  border-radius: inherit;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--vermelho) 70%, var(--dourado)), var(--vermelho));
 }
-.crm-origem strong { font-variant-numeric: tabular-nums; }
-.crm-origem small { color: var(--tinta-fraca); font-weight: 400; }
-.crm-vazio-curto { color: var(--tinta-fraca); font-size: 0.84rem; }
+.crm-origem--esqueleto { display: block; }
+.crm-origem--esqueleto .esqueleto { display: block; height: 1.6rem; border-radius: var(--r-campo); }
+.crm-vazio-curto { color: var(--tinta-fraca); font-size: var(--p-corpo); }
 
 .crm-ia { border-top: 2px solid var(--dourado); }
 .crm-ia__estado {
@@ -268,12 +510,24 @@
 }
 
 .crm-funil-topo { align-items: end; margin-top: 0.4rem; }
-.crm-funil-topo > span { color: var(--tinta-fraca); font-size: 0.8rem; white-space: nowrap; }
+.crm-funil-topo > span {
+  color: var(--tinta-fraca);
+  font-size: var(--p-corpo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* As 7 etapas não cabem em 1440px, então o funil rola na horizontal. A máscara
+   nas bordas é o que avisa que ainda tem coluna do lado: sem ela, "Perdidos"
+   simplesmente não existia pra quem não tentasse arrastar a barra. */
 .crm-funil {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(16.5rem, 1fr);
-  align-items: start;
+  grid-auto-columns: minmax(17.5rem, 1fr);
+  /* `stretch`, não `start`: as colunas ficam todas na altura da mais cheia.
+     Além de emparelhar o desenho, isso dá área de soltura de verdade nas
+     etapas vazias, que com `start` encolhiam pra 21rem e viravam um alvo
+     pequeno justamente onde o corretor mais precisa acertar o arraste. */
+  align-items: stretch;
   gap: 0.75rem;
   max-width: 100%;
   padding: 0.2rem 0.1rem 1rem;
@@ -281,59 +535,105 @@
   overscroll-behavior-inline: contain;
   scroll-snap-type: inline proximity;
   scrollbar-color: var(--linha-forte) transparent;
+  mask-image: linear-gradient(90deg,
+    transparent 0, #000 1.25rem, #000 calc(100% - 1.25rem), transparent 100%);
 }
+/* Sem máscara quando tudo cabe na tela, senão as colunas das pontas ficariam
+   desbotadas à toa. */
+@media (min-width: 1800px) {
+  .crm-funil { mask-image: none; }
+}
+/* O trilho de cima carrega a `--forca` da etapa (ver ETAPAS em js/crm.js): o
+   vinho vai ficando mais saturado do "Novos" até o "Fechados". É leitura de
+   progresso com uma cor só. "Perdidos" tem forca 0 e cai no cinza. */
 .funil-coluna {
+  position: relative;
   min-height: 21rem;
   display: grid;
   grid-template-rows: auto auto 1fr;
-  gap: 0.55rem;
-  padding: 0.7rem;
+  gap: 0.5rem;
+  padding: 0.85rem 0.7rem 0.7rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-card);
-  background: color-mix(in srgb, var(--bg-fundo) 55%, var(--bg-alto));
+  background: color-mix(in srgb, var(--bg-fundo) 45%, var(--bg-alto));
   scroll-snap-align: start;
-  transition: border-color var(--rapido), background var(--rapido);
+  transition: border-color var(--rapido), background var(--rapido), box-shadow var(--rapido);
+}
+.funil-coluna::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  background: color-mix(in srgb, var(--vermelho) calc(var(--forca, 0) * 100%), var(--linha-forte));
 }
 .funil-coluna--recebendo {
   border-color: var(--vermelho);
   background: var(--vermelho-fraco);
+  box-shadow: 0 0 0 3px var(--vermelho-fraco);
 }
 .funil-coluna__topo {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  min-height: 2rem;
+  gap: 0.45rem;
+  min-height: 1.8rem;
 }
-.funil-coluna__topo > div { display: flex; align-items: center; gap: 0.45rem; }
-.funil-coluna__topo .ph { color: var(--vermelho); }
-.funil-coluna__topo h4 { font-size: 0.88rem; font-weight: 600; }
-.funil-coluna__topo > span {
-  min-width: 1.55rem;
-  height: 1.55rem;
+.funil-coluna__topo .ph {
+  color: var(--vermelho);
+  opacity: calc(0.35 + var(--forca, 0) * 0.65);
+}
+.funil-coluna__topo h4 {
+  font-size: var(--p-corpo);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.funil-coluna__contagem {
+  min-width: 1.6rem;
+  height: 1.6rem;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  padding-inline: 0.35rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-btn);
   background: var(--bg-alto);
   color: var(--tinta-media);
-  font-size: 0.72rem;
+  font-size: var(--p-micro);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.funil-coluna__valor {
+  color: var(--tinta-fraca);
+  font-size: var(--p-nano);
   font-variant-numeric: tabular-nums;
 }
-.funil-coluna__valor { color: var(--tinta-fraca); font-size: 0.7rem; }
-.funil-coluna__corpo { min-height: 14rem; display: grid; align-content: start; gap: 0.55rem; }
+.funil-coluna__corpo { min-height: 14rem; display: grid; align-content: start; gap: 0.5rem; }
 .funil-coluna__vazio {
   display: grid;
   place-items: center;
+  align-content: center;
+  gap: 0.4rem;
   min-height: 8rem;
+  padding: 0.75rem;
   border: 1px dashed var(--linha-forte);
   border-radius: var(--r-campo);
   color: var(--tinta-fraca);
-  font-size: 0.76rem;
+  font-size: var(--p-micro);
+  text-align: center;
 }
+.funil-coluna__vazio .ph { font-size: 1.25rem; opacity: 0.6; }
+.funil-coluna--esqueleto { display: grid; gap: 0.5rem; align-content: start; }
+
+/* ------------------------------------------------------- card do lead ---- */
 
 .lead-card {
+  position: relative;
   display: grid;
-  gap: 0.55rem;
-  padding: 0.8rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   border: 1px solid var(--linha);
   border-left: 3px solid var(--linha-forte);
   border-radius: var(--r-campo);
@@ -353,20 +653,50 @@
 .lead-card--p2 { border-left-color: var(--dourado); }
 .lead-card--p3,
 .lead-card--atrasado { border-left-color: var(--vermelho); }
-.lead-card--arrastando { opacity: 0.48; transform: rotate(1deg); }
-.lead-card__topo,
-.lead-card__rodape {
-  display: flex;
+.lead-card--arrastando {
+  opacity: 0.45;
+  transform: rotate(1.5deg) scale(0.98);
+  box-shadow: var(--sombra-alta);
+}
+.lead-card__topo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
+}
+/* Monograma no lugar de avatar: lead que chega pelo Instagram não traz foto, e
+   um ícone de "pessoa" genérico repetido 13 vezes na tela não distingue nada.
+   Duas letras distinguem. */
+.lead-card__avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--dourado-fio);
+  border-radius: 50%;
+  background: var(--bg-fundo);
+  color: var(--dourado-texto);
+  font-family: var(--fonte-display);
+  font-size: var(--p-nano);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.lead-card__identidade { min-width: 0; display: grid; gap: 0.1rem; }
+.lead-card__nome {
+  font-size: var(--p-corpo);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .lead-card__origem {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.28rem;
   color: var(--tinta-fraca);
-  font-size: 0.68rem;
+  font-size: var(--p-nano);
 }
 .lead-card__nao-lidas {
   min-width: 1.3rem;
@@ -376,39 +706,89 @@
   border-radius: 50%;
   background: var(--vermelho);
   color: var(--sobre-vermelho);
-  font-size: 0.65rem;
+  font-size: var(--p-nano);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
-.lead-card__nome { font-size: 0.9rem; font-weight: 600; }
 .lead-card__interesse {
   min-height: 2.2em;
   color: var(--tinta-media);
-  font-size: 0.76rem;
+  font-size: var(--p-micro);
   line-height: 1.4;
 }
 .lead-card__tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .lead-card__tags span {
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--linha);
   border-radius: var(--r-btn);
   background: var(--bg-fundo);
   color: var(--tinta-media);
-  font-size: 0.62rem;
+  font-size: var(--p-nano);
 }
 .lead-card__rodape {
-  padding-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.45rem;
   border-top: 1px solid var(--linha);
   color: var(--tinta-fraca);
-  font-size: 0.65rem;
+  font-size: var(--p-nano);
 }
-.lead-card__retorno { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--vermelho); font-weight: 600; }
+.lead-card__retorno {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--vermelho);
+  font-weight: 600;
+}
+/* Atalho do WhatsApp: aparece no hover no desktop e fica sempre visível no
+   toque, onde hover não existe (regra logo abaixo). */
+.lead-card__zap {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--linha);
+  border-radius: 50%;
+  background: var(--bg-alto);
+  color: var(--tinta-media);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity var(--rapido), transform var(--rapido), color var(--rapido), border-color var(--rapido);
+}
+.lead-card:hover .lead-card__zap,
+.lead-card:focus-within .lead-card__zap { opacity: 1; transform: scale(1); }
+.lead-card__zap:hover { border-color: var(--vermelho); color: var(--vermelho); }
+.lead-card__zap:focus-visible { opacity: 1; transform: scale(1); }
+@media (hover: none) {
+  .lead-card__zap { opacity: 1; transform: scale(1); }
+}
+/* Quando o atalho está visível ele cobre o contador de não lidas. Empurro o
+   contador pra o lado no hover pra os dois conviverem. */
+.lead-card:hover .lead-card__nao-lidas,
+.lead-card:focus-within .lead-card__nao-lidas { margin-right: 1.6rem; }
+@media (hover: none) {
+  .lead-card__nao-lidas { margin-right: 1.6rem; }
+}
 .crm-erro { grid-column: 1 / -1; min-width: min(100%, 32rem); }
 
 /* -------------------------------------------------------- ficha do lead ---- */
 
+/* `margin: auto` é como o navegador centraliza um dialog aberto por
+   showModal(). O `* { margin: 0 }` do site.css atropelava isso, e os dois
+   modais nasciam grudados no canto superior esquerdo. Passava despercebido na
+   ficha do lead, que é quase do tamanho da tela; no "Novo lead", que é
+   estreito, ficava evidente. Só vale pro modal — dialog fechado não ocupa
+   espaço, então não há o que centralizar. */
 dialog {
   color: var(--tinta);
   font-family: var(--fonte-texto);
 }
+dialog:modal { margin: auto; }
 dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px); }
 
 .lead-dialog {
@@ -489,7 +869,37 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   scrollbar-color: var(--linha-forte) transparent;
 }
 .lead-ficha { border-right: 1px solid var(--linha); }
-.lead-ficha form { display: grid; gap: 1rem; }
+.lead-ficha form { display: grid; gap: 1.25rem; }
+
+/* Blocos da ficha. Começou como <fieldset><legend>, que é o elemento mais
+   correto pra agrupar campos, mas `display: grid` num fieldset faz o legend
+   sumir da renderização. Div com role="group" + aria-labelledby entrega a
+   mesma amarração pro leitor de tela e desenha do jeito esperado. */
+.lead-grupo { display: grid; gap: 0.75rem; }
+/* O fio separa grupos, então mora entre irmãos. `:first-of-type` não servia:
+   o primeiro div do formulário é o cabeçalho com o botão Salvar, e nenhum
+   .lead-grupo era o primeiro do seu tipo — o primeiro grupo ficava com uma
+   linha solta em cima, separando ele de nada. */
+.lead-grupo + .lead-grupo {
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--linha);
+}
+.lead-grupo__titulo {
+  color: var(--dourado-texto);
+  font-size: var(--p-nano);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Duas colunas explícitas, não auto-fit. Dois motivos: a coluna da ficha dá
+   519px úteis e o mínimo de 16rem pedia 528px, então faltavam 9 pixels e a
+   grade inteira desabava pra uma coluna só, virando uma escada de 18 campos;
+   e `grid-column: 1 / -1` do .campo--largo não funciona com repeat(auto-fit),
+   porque com contagem indefinida a linha -1 não resolve pro fim da grade. */
+.lead-ficha .grade-campos--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 560px) {
+  .lead-ficha .grade-campos--2 { grid-template-columns: minmax(0, 1fr); }
+}
 .lead-secao-topo { align-items: center; margin-bottom: 1rem; }
 .lead-agenda {
   display: grid;
@@ -624,6 +1034,14 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   background: var(--bg-alto);
   border: 1px solid var(--linha);
   border-radius: var(--r-campo);
+  transition: border-color var(--rapido), transform var(--rapido), box-shadow var(--rapido);
+}
+/* Mesma resposta ao toque do card do funil: as duas listas do painel se
+   comportam igual, então a mão aprende uma vez só. */
+.linha:hover {
+  border-color: var(--dourado-fio);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra);
 }
 .linha__foto {
   width: 4.5rem; height: 3.4rem;
@@ -631,8 +1049,12 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   border-radius: 8px;
   background: var(--bg-fundo);
 }
-.linha__titulo { font-weight: 500; }
-.linha__meta { font-size: 0.85rem; color: var(--tinta-fraca); }
+.linha__titulo { font-weight: 600; letter-spacing: -0.01em; }
+.linha__meta {
+  font-size: 0.85rem;
+  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+}
 .linha__acoes { display: flex; gap: 0.4rem; }
 
 .pilula {
@@ -641,6 +1063,7 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   border-radius: var(--r-btn);
   font-size: 0.76rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   border: 1px solid var(--linha-forte);
 }
 .pilula--disponivel { color: var(--dourado-texto); border-color: var(--dourado-fio); }
@@ -1013,13 +1436,18 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   .crm-kpi:nth-child(3) { border-right: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
   .crm-kpi:nth-child(even) { border-right: 0; }
   .crm-kpi:nth-last-child(-n+2) { border-bottom: 0; }
-  .crm-kpi { min-height: 6rem; padding: 0.75rem; }
-  .crm-kpi > .ph { display: none; }
-  .crm-kpi { grid-template-columns: 1fr; }
+  .crm-kpi { min-height: 5.75rem; padding: 0.8rem; }
+  .crm-kpi__marca { font-size: 2.6rem; }
   .crm-resumo { grid-template-columns: 1fr; }
   .crm-ia { grid-column: auto; }
-  .crm-grafico { height: 10rem; gap: 0.15rem; }
-  .crm-grafico__rotulo { font-size: 0.58rem; transform: rotate(-38deg); transform-origin: center; }
+  .crm-grafico { grid-template-rows: 10rem auto; }
+  /* Numa tela de 390px cabem 10 datas só se rodarem de lado. Deixo em pé a
+     primeira e a última, que dão o intervalo, e escondo o resto: o eixo aqui
+     serve pra ancorar a curva no tempo, não pra ler data por data. O valor
+     exato de cada ponto continua a um toque de distância, no balão. */
+  .crm-grafico__eixo span { display: none; }
+  .crm-grafico__eixo span:first-child,
+  .crm-grafico__eixo span:last-child { display: inline; }
   .crm-funil-topo { align-items: flex-start; flex-direction: column; }
   .crm-funil { grid-auto-columns: minmax(16rem, 84vw); }
   .lead-dialog__acoes { align-items: stretch; flex-wrap: wrap; padding-inline: 0.8rem; }
@@ -1034,4 +1462,77 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   .lead-compositor__acoes .btn,
   .lead-compositor__acoes .btn-mini { flex: 1 1 auto; }
   .lead-compositor__acoes .btn:last-child { width: 100%; margin-left: 0; }
+}
+
+/* ==========================================================================
+   Movimento
+   --------------------------------------------------------------------------
+   Regra que vale pra tudo aqui: animação só entra se responder a uma pergunta
+   do corretor. Entrada escalonada responde "isto acabou de carregar e está
+   completo". O desenho da curva responde "o gráfico é novo, olhe de novo".
+   O arraste responde "estou segurando o card certo". Nada de laço infinito:
+   quem passa o dia nesta tela cansa de coisa piscando em duas horas.
+
+   Todo o bloco está dentro de `no-preference`, então quem pediu menos
+   movimento no sistema recebe a mesma tela, pronta e parada, sem nenhum
+   estado inicial preso em opacity 0.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+
+  @keyframes crm-sobe {
+    from { opacity: 0; transform: translateY(0.6rem); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @keyframes crm-risca {
+    from { stroke-dashoffset: var(--traco); }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  @keyframes crm-revela {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+  }
+
+  @keyframes crm-cresce {
+    from { transform: scaleX(0); }
+    to   { transform: none; }
+  }
+
+  /* --i é o índice, escrito pelo js/crm.js em cada item. O atraso em cascata
+     é o que faz a fileira "assentar" da esquerda pra direita em vez de as seis
+     células piscarem juntas. Teto de 6 pra a última não demorar. */
+  .crm-kpi,
+  .funil-coluna,
+  .crm-origem {
+    animation: crm-sobe 0.4s var(--ease) backwards;
+    animation-delay: calc(min(var(--i, 0), 6) * 45ms);
+  }
+  .lead-card {
+    animation: crm-sobe 0.32s var(--ease) backwards;
+    animation-delay: calc(min(var(--i, 0), 5) * 40ms + 120ms);
+  }
+  /* Card em movimento não anima de novo: durante o arraste o funil é
+     re-renderizado e a coluna inteira daria um pulo. */
+  .lead-card--arrastando { animation: none; }
+
+  .crm-grafico__linha {
+    stroke-dasharray: var(--traco, 1000);
+    animation: crm-risca 0.9s var(--ease) forwards;
+  }
+  .crm-grafico__area { animation: crm-revela 0.9s var(--ease) backwards; }
+  .crm-grafico__ponto {
+    animation: crm-sobe 0.3s var(--ease) backwards;
+    animation-delay: 0.5s;
+  }
+  .crm-origem__linha i {
+    transform-origin: left center;
+    animation: crm-cresce 0.55s var(--ease) backwards;
+    animation-delay: calc(min(var(--i, 0), 6) * 45ms + 100ms);
+  }
+
+  .crm-grafico__balao { animation: crm-sobe 0.16s var(--ease); }
+  .lead-dialog[open] { animation: crm-sobe 0.28s var(--ease); }
+  .modal-curto[open] { animation: crm-sobe 0.22s var(--ease); }
 }
