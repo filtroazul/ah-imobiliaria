@@ -63,6 +63,22 @@ login** — carrega sem erro, mas não entrei na conta.
 
 Pendência externa continua sendo uma só: o fluxo do ManyChat.
 
+### Onde este projeto é publicado (dois lugares, não um)
+
+Conferido em 19/08 batendo as duas URLs: o mesmo repo
+`filtroazul/ah-imobiliaria` é servido por **Vercel E GitHub Pages ao mesmo
+tempo**, e os dois estavam byte a byte iguais.
+
+- `https://ah-imobiliaria.vercel.app/admin.html` → HTTP 200
+- `https://filtroazul.github.io/ah-imobiliaria/admin.html` → HTTP 200
+
+Um `git push origin main` atualiza os dois. Vale registrar porque a
+documentação estava pela metade dos dois lados: este arquivo afirmava só
+"GitHub Pages" e a memória do assistente afirmava só "Vercel", e cada um dos
+dois, sozinho, levava a concluir que o outro host estava desligado. O único
+workflow em `.github/workflows/` é o `keep-supabase-awake.yml`; não existe
+workflow de deploy, então o Pages publica direto da branch.
+
 ---
 
 ## 18/AGO - CRM de leads implementado e publicado
@@ -102,8 +118,8 @@ Produção concluída em 18/08:
    com backup anterior em `/etc/leadiot-webhook.env.bak-20260818-crm`.
 3. O serviço `leadiot-webhook` foi atualizado e reiniciado; o health externo
    responde `crm: true` e a rota antiga continua usando o agente `aioti`.
-4. O painel foi publicado no GitHub Pages pelo commit `2c05645` e validado com
-   login real: 6 indicadores, 7 etapas, modo da IA e nenhuma falha de rede.
+4. O painel foi publicado pelo commit `2c05645` e validado com login real:
+   6 indicadores, 7 etapas, modo da IA e nenhuma falha de rede.
 5. Única pendência externa: editar/publicar o fluxo dentro do ManyChat para
    chamar `/manychat/ah_imobiliaria`. A conta exige login/verificação humana;
    o endpoint e o passo a passo em `deploy/manychat-setup.md` já estão prontos.
