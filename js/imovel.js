@@ -82,16 +82,93 @@ function ligarVideos() {
 
 /* ------------------------------------------------------------- montagem --- */
 
+function montarResumoTecnico(itens = []) {
+  if (!itens.length) return '';
+  return `
+    <div class="imovel__bloco">
+      <p class="imovel__sobretitulo">O empreendimento em números</p>
+      <h2>Ficha técnica</h2>
+      <dl class="resumo-tecnico">
+        ${itens.map(([rotulo, valor]) => `
+          <div><dt>${escapar(rotulo)}</dt><dd>${escapar(valor)}</dd></div>
+        `).join('')}
+      </dl>
+    </div>`;
+}
+
+function montarPlantas(plantas = []) {
+  if (!plantas.length) return '';
+  return `
+    <div class="imovel__bloco imovel__bloco--largo">
+      <p class="imovel__sobretitulo">Escolha o espaço que combina com a sua rotina</p>
+      <h2>Plantas disponíveis</h2>
+      <div class="plantas">
+        ${plantas.map((planta) => `
+          <a class="planta" href="${escapar(planta.imagem)}" target="_blank" rel="noopener">
+            <div class="planta__imagem">
+              <img src="${escapar(planta.imagem)}" alt="Planta: ${escapar(planta.titulo)}"
+                   decoding="async">
+              <span><i class="ph ph-arrows-out" aria-hidden="true"></i> Ampliar</span>
+            </div>
+            <div class="planta__texto">
+              <strong>${escapar(planta.titulo)}</strong>
+              <small>${escapar(planta.subtitulo)}</small>
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function montarCondicao(condicao) {
+  if (!condicao?.itens?.length) return '';
+  return `
+    <div class="imovel__bloco condicao">
+      <div class="condicao__cabeca">
+        <span class="condicao__icone"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+        <div>
+          <p class="imovel__sobretitulo">Preço encontrado no material comercial</p>
+          <h2>${escapar(condicao.titulo)}</h2>
+        </div>
+      </div>
+      <dl class="condicao__grade">
+        ${condicao.itens.map(([rotulo, valor]) => `
+          <div><dt>${escapar(rotulo)}</dt><dd>${escapar(valor)}</dd></div>
+        `).join('')}
+      </dl>
+      <p class="condicao__nota"><i class="ph ph-info" aria-hidden="true"></i>${escapar(condicao.nota)}</p>
+    </div>`;
+}
+
+function montarDocumentos(documentos = [], atualizadoEm = '') {
+  if (!documentos.length) return '';
+  return `
+    <div class="imovel__bloco">
+      <p class="imovel__sobretitulo">Consulte a fonte</p>
+      <h2>Materiais do empreendimento</h2>
+      <div class="documentos">
+        ${documentos.map((doc) => `
+          <a class="documento" href="${escapar(doc.url)}" target="_blank" rel="noopener">
+            <span class="documento__icone"><i class="ph ph-file-pdf" aria-hidden="true"></i></span>
+            <span><strong>${escapar(doc.titulo)}</strong><small>${escapar(doc.rotulo)}</small></span>
+            <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
+          </a>
+        `).join('')}
+      </div>
+      ${atualizadoEm ? `<p class="documentos__fonte">Material do Drive atualizado em ${escapar(atualizadoEm)}.</p>` : ''}
+    </div>`;
+}
+
 function montar(imovel) {
   const fotos = imovel.fotos?.length ? imovel.fotos : (imovel.capa ? [imovel.capa] : []);
   const videos = imovel.videos ?? [];
 
   const dados = [
-    ['Quartos', imovel.quartos || null],
+    ['Quartos', imovel.quartos_rotulo || imovel.quartos || null],
     ['Suítes', imovel.suites || null],
     ['Banheiros', imovel.banheiros || null],
     ['Vagas', imovel.vagas || null],
-    ['Área útil', area(imovel.area_util)],
+    ['Área útil', imovel.area_rotulo || area(imovel.area_util)],
     ['Área total', area(imovel.area_total)],
   ].filter(([, v]) => v != null && v !== '');
 
@@ -127,6 +204,7 @@ function montar(imovel) {
 <div class="imovel">
   <div>
     <div class="imovel__cabeca">
+      ${imovel.marca ? `<img class="imovel__marca" src="${escapar(imovel.marca)}" alt="" width="160" height="218">` : ''}
       <p class="imovel__local">
         ${escapar(FINALIDADE[imovel.finalidade] ?? '')} ·
         ${escapar(TIPOS[imovel.tipo] ?? imovel.tipo)} em ${local}
@@ -148,6 +226,12 @@ function montar(imovel) {
       <p class="imovel__descricao">${escapar(imovel.descricao)}</p>
     </div>` : ''}
 
+    ${montarResumoTecnico(imovel.resumo_tecnico)}
+
+    ${montarPlantas(imovel.plantas)}
+
+    ${montarCondicao(imovel.condicao_comercial)}
+
     ${videos.length ? `
     <div class="imovel__bloco">
       <h2>${videos.length > 1 ? 'Vídeos' : 'Vídeo do imóvel'}</h2>
@@ -164,6 +248,8 @@ function montar(imovel) {
       </div>
     </div>` : ''}
 
+    ${montarDocumentos(imovel.documentos, imovel.fonte_atualizada_em)}
+
     <div class="imovel__bloco">
       <h2>Localização</h2>
       <div class="mapa" id="mapa"></div>
@@ -178,6 +264,9 @@ function montar(imovel) {
   <aside class="painel">
     <div>
       <p class="painel__preco">${precoRotulo(imovel)}</p>
+      ${imovel.entrada_referencia ? `
+        <p class="painel__entrada">Entrada de referência: <strong>${moeda(imovel.entrada_referencia)}</strong></p>
+      ` : ''}
       ${custos.length ? `
       <div class="painel__custos" style="margin-top:.9rem">
         ${custos.map(([r, v]) => `<div><span>${r}</span><span>${escapar(v)}</span></div>`).join('')}
@@ -315,6 +404,16 @@ async function iniciar() {
     }
 
     document.title = `${imovel.titulo} | Ah Imobiliária`;
+    const metaDescricao = document.querySelector('meta[name="description"]');
+    const ogTitulo = document.querySelector('meta[property="og:title"]');
+    const ogDescricao = document.querySelector('meta[property="og:description"]');
+    if (ogTitulo) ogTitulo.content = document.title;
+    if (metaDescricao && imovel.descricao) {
+      metaDescricao.content = imovel.descricao.replace(/\s+/g, ' ').slice(0, 155);
+      if (ogDescricao) ogDescricao.content = metaDescricao.content;
+    }
+    const ogImagem = document.querySelector('meta[property="og:image"]');
+    if (ogImagem && imovel.capa) ogImagem.content = new URL(imovel.capa, location.href).href;
     alvo.innerHTML = montar(imovel);
 
     const fotos = imovel.fotos?.length ? imovel.fotos : (imovel.capa ? [imovel.capa] : []);

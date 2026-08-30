@@ -17,6 +17,7 @@
 
 import { CONFIG, configurado } from './config.js';
 import { IMOVEIS_DEMO, BAIRROS_DEMO } from './demo.js';
+import { ORIZON } from './orizon.js';
 import * as local from './local.js';
 
 const CDN_SUPABASE = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -105,10 +106,14 @@ const _moeda = new Intl.NumberFormat('pt-BR', {
 export const moeda = (v) => (v == null ? '' : _moeda.format(v));
 
 /** "R$ 848.000" para venda, "R$ 2.350/mês" para aluguel. */
-export const precoRotulo = (imovel) =>
-  imovel.finalidade === 'aluguel'
+export const precoRotulo = (imovel) => {
+  const valor = imovel.finalidade === 'aluguel'
     ? `${moeda(imovel.preco)}<span class="unidade">/mês</span>`
     : moeda(imovel.preco);
+  return imovel.preco_referencia
+    ? `<span class="preco-prefixo">Valor de referência</span>${valor}`
+    : valor;
+};
 
 export const area = (v) => (v ? `${Number(v).toLocaleString('pt-BR')} m²` : null);
 
@@ -132,6 +137,24 @@ export function linkWhatsApp(imovel) {
 
 const VAZIO = { itens: [], total: 0 };
 
+const correspondeAosFiltros = (imovel, filtros) => {
+  const { finalidade, tipo, bairro, precoMin, precoMax, quartosMin, busca } = filtros;
+  if (finalidade && imovel.finalidade !== finalidade) return false;
+  if (tipo && imovel.tipo !== tipo) return false;
+  if (bairro && imovel.bairro !== bairro) return false;
+  if (precoMin != null && imovel.preco < precoMin) return false;
+  if (precoMax != null && imovel.preco > precoMax) return false;
+  if (quartosMin != null && (imovel.quartos ?? 0) < quartosMin) return false;
+  if (busca) {
+    const alvo = `${imovel.titulo} ${imovel.bairro} ${imovel.cidade} ${imovel.descricao}`;
+    if (!normalizar(alvo).includes(normalizar(busca))) return false;
+  }
+  return true;
+};
+
+const semDuplicarOrizon = (itens) =>
+  itens.filter((i) => i.id !== ORIZON.id && String(i.codigo) !== String(ORIZON.codigo));
+
 /**
  * Lista o catálogo com filtros.
  * @returns {Promise<{itens: Array, total: number}>}
@@ -146,23 +169,12 @@ export async function listarImoveis(filtros = {}) {
 
   // ---- local e exemplo: filtra em memória -----------------------------------
   if (modo !== MODO.NUVEM) {
-    const fonte = modo === MODO.LOCAL
+    const origem = modo === MODO.LOCAL
       ? (await local.listarImoveis()).filter((i) => PUBLICOS.includes(i.status))
       : IMOVEIS_DEMO;
+    const fonte = [ORIZON, ...semDuplicarOrizon(origem)];
 
-    let itens = fonte.filter((i) => {
-      if (finalidade && i.finalidade !== finalidade) return false;
-      if (tipo && i.tipo !== tipo) return false;
-      if (bairro && i.bairro !== bairro) return false;
-      if (precoMin != null && i.preco < precoMin) return false;
-      if (precoMax != null && i.preco > precoMax) return false;
-      if (quartosMin != null && (i.quartos ?? 0) < quartosMin) return false;
-      if (busca) {
-        const alvo = `${i.titulo} ${i.bairro} ${i.cidade} ${i.descricao}`.toLowerCase();
-        if (!normalizar(alvo).includes(normalizar(busca))) return false;
-      }
-      return true;
-    });
+    let itens = fonte.filter((i) => correspondeAosFiltros(i, filtros));
     itens.sort((a, b) => Number(b.destaque) - Number(a.destaque) || a.preco - b.preco);
 
     const total = itens.length;
@@ -172,7 +184,9 @@ export async function listarImoveis(filtros = {}) {
     // Só a página visível é hidratada: criar endereço de blob pra carteira
     // inteira a cada filtro é trabalho jogado fora.
     return {
-      itens: modo === MODO.LOCAL ? await Promise.all(pagina_.map(hidratar)) : pagina_,
+      itens: modo === MODO.LOCAL
+        ? await Promise.all(pagina_.map((i) => i.id === ORIZON.id ? i : hidratar(i)))
+        : pagina_,
       total,
     };
   }
@@ -197,7 +211,12 @@ export async function listarImoveis(filtros = {}) {
 
   const { data, error, count } = await q;
   if (error) throw new Error(`Não consegui carregar os imóveis: ${error.message}`);
-  return { itens: data ?? [], total: count ?? 0 };
+  const incluiOrizon = correspondeAosFiltros(ORIZON, filtros);
+  const itensBanco = semDuplicarOrizon(data ?? []);
+  return {
+    itens: pagina === 0 && incluiOrizon ? [ORIZON, ...itensBanco] : itensBanco,
+    total: (count ?? 0) + (incluiOrizon ? 1 : 0),
+  };
 }
 
 /** Os imóveis marcados como destaque, pra vitrine da home. */
@@ -205,14 +224,15 @@ export async function listarDestaques(quantidade = 3) {
   const modo = await modoAtual();
 
   if (modo === MODO.EXEMPLO) {
-    return IMOVEIS_DEMO.filter((i) => i.destaque).slice(0, quantidade);
+    return [ORIZON, ...IMOVEIS_DEMO.filter((i) => i.destaque)].slice(0, quantidade);
   }
 
   if (modo === MODO.LOCAL) {
     const itens = (await local.listarImoveis())
       .filter((i) => i.destaque && PUBLICOS.includes(i.status))
       .slice(0, quantidade);
-    return Promise.all(itens.map(hidratar));
+    return [ORIZON, ...await Promise.all(semDuplicarOrizon(itens).map(hidratar))]
+      .slice(0, quantidade);
   }
 
   const sb = await cliente();
@@ -220,14 +240,16 @@ export async function listarDestaques(quantidade = 3) {
     .in('status', PUBLICOS)
     .eq('destaque', true)
     .order('criado_em', { ascending: false })
-    .limit(quantidade);
+    .limit(Math.max(quantidade - 1, 0));
 
   if (error) throw new Error(`Não consegui carregar os destaques: ${error.message}`);
-  return data ?? [];
+  return [ORIZON, ...semDuplicarOrizon(data ?? [])].slice(0, quantidade);
 }
 
 /** Um imóvel completo, com todas as fotos, pela página de detalhe. */
 export async function obterImovel(codigo) {
+  if (String(codigo).toUpperCase() === String(ORIZON.codigo)) return ORIZON;
+
   const modo = await modoAtual();
 
   if (modo === MODO.EXEMPLO) {
@@ -263,17 +285,17 @@ export async function obterImovel(codigo) {
 export async function listarBairros() {
   const modo = await modoAtual();
 
-  if (modo === MODO.EXEMPLO) return BAIRROS_DEMO;
+  if (modo === MODO.EXEMPLO) return ordenarBairros([...BAIRROS_DEMO, ORIZON.bairro]);
 
   if (modo === MODO.LOCAL) {
     const itens = (await local.listarImoveis()).filter((i) => PUBLICOS.includes(i.status));
-    return ordenarBairros(itens.map((i) => i.bairro));
+    return ordenarBairros([...itens.map((i) => i.bairro), ORIZON.bairro]);
   }
 
   const sb = await cliente();
   const { data, error } = await sb.from('catalogo').select('bairro').in('status', PUBLICOS);
   if (error) return [];
-  return ordenarBairros(data.map((r) => r.bairro));
+  return ordenarBairros([...data.map((r) => r.bairro), ORIZON.bairro]);
 }
 
 const ordenarBairros = (lista) =>

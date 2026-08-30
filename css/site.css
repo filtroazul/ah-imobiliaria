@@ -732,6 +732,16 @@ p { text-wrap: pretty; }
   letter-spacing: -0.03em;
   color: var(--vermelho);
 }
+.card__preco .preco-prefixo {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-family: var(--fonte-texto);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
 .card__preco .unidade {
   font-size: 0.72em;
   font-weight: 400;

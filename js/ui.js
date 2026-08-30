@@ -25,11 +25,11 @@ const ROTULO_STATUS = { reservado: 'Reservado' };
  */
 export function cardImovel(imovel, { alto = false, prioridade = false } = {}) {
   const ficha = [
-    imovel.quartos ? `<span><i class="ph ph-bed ico" aria-hidden="true"></i>${imovel.quartos} ${imovel.quartos > 1 ? 'quartos' : 'quarto'}</span>` : '',
+    imovel.quartos ? `<span><i class="ph ph-bed ico" aria-hidden="true"></i>${escapar(imovel.quartos_rotulo ?? imovel.quartos)} quartos</span>` : '',
     imovel.banheiros ? `<span><i class="ph ph-shower ico" aria-hidden="true"></i>${imovel.banheiros}</span>` : '',
     imovel.vagas ? `<span><i class="ph ph-car ico" aria-hidden="true"></i>${imovel.vagas}</span>` : '',
-    area(imovel.area_util ?? imovel.area_total)
-      ? `<span><i class="ph ph-ruler ico" aria-hidden="true"></i>${area(imovel.area_util ?? imovel.area_total)}</span>` : '',
+    (imovel.area_rotulo ?? area(imovel.area_util ?? imovel.area_total))
+      ? `<span><i class="ph ph-ruler ico" aria-hidden="true"></i>${escapar(imovel.area_rotulo ?? area(imovel.area_util ?? imovel.area_total))}</span>` : '',
   ].filter(Boolean).join('');
 
   const selo = ROTULO_STATUS[imovel.status]
