@@ -6,6 +6,120 @@
 
 ---
 
+## 03/SET - Meta Lead Ads pronto no código; ativação externa pendente
+
+Foi criada a integração própria para os formulários instantâneos dos anúncios:
+
+```
+Meta Lead Ads → GET/POST /meta/lead-ads → Graph API → Supabase → painel
+```
+
+Ela valida o desafio e a assinatura `X-Hub-Signature-256`, impede duplicação por
+`leadgen_id`, persiste falhas para retry, traz a atribuição de campanha/conjunto/
+anúncio/formulário e mostra tudo na ficha e no CSV. O consentimento de WhatsApp é
+um campo separado e só vira `true` quando o formulário trouxer uma resposta
+positiva explícita; presença de telefone não conta como consentimento.
+
+Arquivos principais: `core/meta_leads.py`, `webhook_manychat.py`,
+`supabase/migrations/20260903_meta_lead_ads.sql` e
+`deploy/meta-lead-ads.md`. Os testes automatizados ficam em `tests/` na raiz.
+
+**Ainda não foi publicado nem ligado à conta Meta.** A próxima sessão deve:
+
+1. aplicar a migration no Supabase;
+2. configurar os segredos na VM, conforme `deploy/meta-lead-ads.md`;
+3. criar/configurar o app no Meta for Developers e assinar a Página;
+4. enviar um lead de teste e confirmar entrada no painel.
+
+Não gravar tokens, senha ou códigos de verificação em arquivo.
+
+---
+
+## 20/AGO - ManyChat descartado. A caixa de entrada já estava pronta.
+
+**A pendência do ManyChat foi encerrada, não adiada por preguiça.** Detalhe
+completo e tela por tela no aviso do topo de `deploy/manychat-setup.md`.
+
+O resumo: a ação **"Fazer uma consulta externa"** (o External Request, que é
+quem chamaria a VM) é **PRO**. No plano grátis nenhuma ação fala com servidor
+de fora. Uns R$ 80-90/mês por conta conectada.
+
+### O que essa sessão revelou e vale mais que o ManyChat
+
+**A caixa de entrada unificada já está construída, dos dois lados.** Isso não
+estava documentado em lugar nenhum e quase virou compra desnecessária.
+
+No banco (`supabase/schema.sql`, tabela `lead_interacoes`):
+
+- o canal **`instagram` já está previsto**, junto com `whatsapp`, `site` e `portal`;
+- `direcao` guarda **entrada e saída**, ou seja, os dois lados da conversa;
+- **`external_id` com índice único por canal** — o mecanismo de não duplicar
+  mensagem vinda de fora. Só existe em quem foi projetado pra canal externo;
+- `lida_em` com índice próprio pras não lidas.
+
+No painel: `js/crm.js:518` já desenha o **contador de não lidas** no card do
+lead, e `js/crm.js:745` já renderiza a **conversa inteira** dentro da ficha.
+
+No servidor: `core/crm.py` já tem `registrar_entrada`, `registrar_saida`,
+`resposta_por_external_id` e `historico_do_lead`. E o corpo que o
+`manychat-setup.md` manda pro endpoint já leva `"origem": "instagram"`.
+
+Ou seja, a cadeia é:
+
+```
+[ ??? ] → POST /manychat/ah_imobiliaria → core/crm.py → lead_interacoes → painel
+   ↑
+   o único buraco da história inteira
+```
+
+**E esse buraco é burocrático, não técnico.** Qualquer ferramenta que leia DM do
+Instagram precisa de permissão da Meta, liberada só depois de Revisão do App. O
+ManyChat consegue porque já é provedor aprovado. Zapier, Make e n8n esbarram no
+mesmo muro. **Os R$ 90/mês compram a aprovação da Meta, não código** — o código
+já é seu.
+
+### A decisão: dois lugares, cada um no que é bom
+
+| | Meta Business Suite (grátis) | Este painel |
+|---|---|---|
+| Direct, Messenger, comentários | ✅ | ❌ |
+| Chat do site com IA que conhece os 7 imóveis | ❌ | ✅ |
+| Funil com etapas, conversão, campos do lead | ❌ só etiqueta | ✅ |
+| Resposta automática | texto fixo | IA que consulta o catálogo |
+
+**Business Suite é a portaria** (primeiro contato, curioso, barulho). **O painel
+é quem já entrou.** Lead do site cai sozinho aqui; Direct que esquentou, o
+corretor promove no botão "Novo lead", que já existe. É como imobiliária de
+verdade trabalha.
+
+Custo: R$ 0. Sem mensalidade, sem Revisão de App, sem cano pra construir.
+
+⚠️ **Em imóvel, resposta humana converte melhor que bot.** Quem pergunta sobre
+um apartamento de R$ 389 mil quer falar com gente. A IA do site é ótima pra
+filtrar quem está só olhando; no Direct, um bot pode esfriar lead quente.
+
+### O plano B é melhor que o plano A, mas é pra depois
+
+**Revisão do App da Meta uma vez, no nome da AIOTI:** o app aprovado atende
+quantos clientes quiser, cada um conectando o próprio Instagram. Custo por
+cliente **R$ 0 pra sempre**, contra R$ 90/mês por cliente se revendesse
+ManyChat. A rota da Meta não é o plano pobre, **é o produto**.
+
+Só depois do primeiro cliente pagante: a revisão pede política de privacidade
+publicada, ícone, vídeo demonstrando o uso, e leva semanas.
+
+### Fica pronto e não precisa refazer
+
+Conta ManyChat criada e **@ah.imobiliaria conectada** ("AH Imóveis", plano FREE,
+avatar com a logo certa). Se um dia retomar, a conexão está lá.
+
+### Ação prática que ficou pendente pro dono
+
+Botar o **link do site na bio do @ah.imobiliaria** e nos stories. É o que enche
+o funil hoje, de graça, pelo canal que já funciona.
+
+---
+
 ## 19/AGO - Painel redesenhado e 4 defeitos corrigidos
 
 Passada de design em cima do painel inteiro, preservando a identidade travada
@@ -62,6 +176,8 @@ lead, console limpo. **O caminho da nuvem foi verificado só até a tela de
 login** — carrega sem erro, mas não entrei na conta.
 
 Pendência externa continua sendo uma só: o fluxo do ManyChat.
+*(Superado em 20/08 — ver a seção acima. O ManyChat foi descartado e a pendência
+virou uma só, não técnica: botar o link do site na bio do Instagram.)*
 
 ### Onde este projeto é publicado (dois lugares, não um)
 

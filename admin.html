@@ -137,6 +137,7 @@
           <select id="crm-origem">
             <option value="">Todas as origens</option>
             <option value="site">Site</option>
+            <option value="meta_ads">Meta Ads</option>
             <option value="whatsapp">WhatsApp</option>
             <option value="instagram">Instagram</option>
             <option value="telefone">Telefone</option>
@@ -624,6 +625,19 @@
                   <input type="text" id="lead-motivo-perda">
                 </label>
               </div>
+            </div>
+
+            <div class="lead-grupo" id="lead-meta-grupo" role="group" aria-labelledby="lead-grupo-meta" hidden>
+              <h4 class="lead-grupo__titulo" id="lead-grupo-meta">Origem Meta Ads</h4>
+              <dl class="lead-meta-grade">
+                <div><dt>Campanha</dt><dd id="lead-meta-campanha">—</dd></div>
+                <div><dt>Conjunto</dt><dd id="lead-meta-conjunto">—</dd></div>
+                <div><dt>Anúncio</dt><dd id="lead-meta-anuncio">—</dd></div>
+                <div><dt>Formulário</dt><dd id="lead-meta-formulario">—</dd></div>
+                <div><dt>Leadgen ID</dt><dd id="lead-meta-leadgen">—</dd></div>
+                <div><dt>Consentimento WhatsApp</dt><dd id="lead-meta-opt-in">Não informado</dd></div>
+              </dl>
+              <p class="dica">Ter informado um telefone não significa autorização para mensagem automática.</p>
             </div>
           </form>
 

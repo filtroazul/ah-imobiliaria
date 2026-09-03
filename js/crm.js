@@ -30,6 +30,7 @@ const ETAPAS = [
 const ETAPA_POR_ID = new Map(ETAPAS.map((etapa) => [etapa.id, etapa]));
 const ORIGENS = {
   site: { nome: 'Site', icone: 'ph-globe' },
+  meta_ads: { nome: 'Meta Ads', icone: 'ph-megaphone' },
   whatsapp: { nome: 'WhatsApp', icone: 'ph-whatsapp-logo' },
   instagram: { nome: 'Instagram', icone: 'ph-instagram-logo' },
   telefone: { nome: 'Telefone', icone: 'ph-phone' },
@@ -620,6 +621,8 @@ function exportarCSV() {
     'Nome', 'Telefone', 'E-mail', 'Origem', 'Etapa', 'Prioridade', 'Finalidade',
     'Tipo', 'Bairros', 'Preço mínimo', 'Preço máximo', 'Valor potencial',
     'Próximo contato', 'Criado em', 'Última atividade', 'IA ativa', 'Tags', 'Resumo',
+    'Meta Campaign ID', 'Meta Campaign', 'Meta Adset ID', 'Meta Adset',
+    'Meta Ad ID', 'Meta Ad', 'Meta Form ID', 'Meta Leadgen ID', 'Consentimento WhatsApp',
   ];
   const conteudo = [cabecalho, ...linhas.map((lead) => [
     lead.nome,
@@ -640,6 +643,16 @@ function exportarCSV() {
     lead.ia_ativa === false ? 'Não' : 'Sim',
     (lead.tags ?? []).join(', '),
     lead.resumo,
+    lead.meta_campaign_id,
+    lead.meta_campaign_name,
+    lead.meta_adset_id,
+    lead.meta_adset_name,
+    lead.meta_ad_id,
+    lead.meta_ad_name,
+    lead.meta_form_id,
+    lead.leadgen_id,
+    lead.whatsapp_opt_in === true ? 'Autorizado'
+      : lead.whatsapp_opt_in === false ? 'Recusado' : 'Não informado',
   ])].map((linha) => linha.map(celula).join(';')).join('\r\n');
 
   const blob = new Blob([`\ufeff${conteudo}`], { type: 'text/csv;charset=utf-8' });
@@ -834,6 +847,19 @@ function abrirLead(id, { reabrir = false } = {}) {
   preencher('#lead-resumo', lead.resumo);
   preencher('#lead-motivo-perda', lead.motivo_perda);
   preencher('#lead-resposta', '');
+  const grupoMeta = $('#lead-meta-grupo');
+  const veioDaMeta = lead.origem === 'meta_ads' || Boolean(lead.leadgen_id);
+  grupoMeta.hidden = !veioDaMeta;
+  if (veioDaMeta) {
+    $('#lead-meta-campanha').textContent = lead.meta_campaign_name || lead.meta_campaign_id || 'Não informada';
+    $('#lead-meta-conjunto').textContent = lead.meta_adset_name || lead.meta_adset_id || 'Não informado';
+    $('#lead-meta-anuncio').textContent = lead.meta_ad_name || lead.meta_ad_id || 'Não informado';
+    $('#lead-meta-formulario').textContent = lead.meta_form_id || 'Não informado';
+    $('#lead-meta-leadgen').textContent = lead.leadgen_id || 'Não informado';
+    const optIn = lead.whatsapp_opt_in === true ? 'Autorizado'
+      : lead.whatsapp_opt_in === false ? 'Recusado' : 'Não informado';
+    $('#lead-meta-opt-in').textContent = optIn;
+  }
   atualizarMotivoPerda();
 
   $('#lead-visita-imovel').innerHTML = '<option value="">Sem imóvel definido</option>' +

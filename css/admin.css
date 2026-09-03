@@ -891,6 +891,31 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+.lead-meta-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+.lead-meta-grade > div {
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-campo);
+  background: var(--bg-fundo);
+}
+.lead-meta-grade dt {
+  color: var(--tinta-fraca);
+  font-size: var(--p-nano);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.lead-meta-grade dd {
+  margin-top: 0.22rem;
+  overflow-wrap: anywhere;
+  color: var(--tinta-media);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
 /* Duas colunas explícitas, não auto-fit. Dois motivos: a coluna da ficha dá
    519px úteis e o mínimo de 16rem pedia 528px, então faltavam 9 pixels e a
    grade inteira desabava pra uma coluna só, virando uma escada de 18 campos;
@@ -899,6 +924,7 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
 .lead-ficha .grade-campos--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 560px) {
   .lead-ficha .grade-campos--2 { grid-template-columns: minmax(0, 1fr); }
+  .lead-meta-grade { grid-template-columns: minmax(0, 1fr); }
 }
 .lead-secao-topo { align-items: center; margin-bottom: 1rem; }
 .lead-agenda {

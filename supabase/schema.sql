@@ -210,7 +210,29 @@ create table if not exists public.leads (
   telefone  text,
   email     text,
   origem    text not null default 'site'
-            check (origem in ('site', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal')),
+            check (origem in ('site', 'meta_ads', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal')),
+
+  -- Atribuicao do formulario instantaneo da Meta. leadgen_id e a chave de
+  -- idempotencia: retries do webhook nunca podem criar o mesmo lead duas vezes.
+  leadgen_id         text,
+  meta_page_id       text,
+  meta_form_id       text,
+  meta_campaign_id   text,
+  meta_campaign_name text,
+  meta_adset_id      text,
+  meta_adset_name    text,
+  meta_ad_id         text,
+  meta_ad_name       text,
+  meta_platform      text,
+  meta_is_organic    boolean,
+  meta_created_time  timestamptz,
+  campos_meta        jsonb not null default '{}'::jsonb,
+
+  -- NULL = nao informado; false = recusou; true = aceitou explicitamente.
+  -- Receber um telefone no formulario nunca muda este campo sozinho.
+  whatsapp_opt_in       boolean,
+  whatsapp_opt_in_em    timestamptz,
+  whatsapp_opt_in_fonte text,
 
   -- perfil de busca, preenchido pelo agente durante a qualificação
   finalidade  text check (finalidade in ('venda', 'aluguel')),
@@ -259,6 +281,26 @@ alter table public.leads add column if not exists motivo_perda text;
 alter table public.leads add column if not exists primeira_resposta_em timestamptz;
 alter table public.leads add column if not exists qualificado_em timestamptz;
 alter table public.leads add column if not exists fechado_em timestamptz;
+alter table public.leads add column if not exists leadgen_id text;
+alter table public.leads add column if not exists meta_page_id text;
+alter table public.leads add column if not exists meta_form_id text;
+alter table public.leads add column if not exists meta_campaign_id text;
+alter table public.leads add column if not exists meta_campaign_name text;
+alter table public.leads add column if not exists meta_adset_id text;
+alter table public.leads add column if not exists meta_adset_name text;
+alter table public.leads add column if not exists meta_ad_id text;
+alter table public.leads add column if not exists meta_ad_name text;
+alter table public.leads add column if not exists meta_platform text;
+alter table public.leads add column if not exists meta_is_organic boolean;
+alter table public.leads add column if not exists meta_created_time timestamptz;
+alter table public.leads add column if not exists campos_meta jsonb not null default '{}'::jsonb;
+alter table public.leads add column if not exists whatsapp_opt_in boolean;
+alter table public.leads add column if not exists whatsapp_opt_in_em timestamptz;
+alter table public.leads add column if not exists whatsapp_opt_in_fonte text;
+
+alter table public.leads drop constraint if exists leads_origem_check;
+alter table public.leads add constraint leads_origem_check
+  check (origem in ('site', 'meta_ads', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal'));
 
 alter table public.leads drop constraint if exists leads_status_check;
 alter table public.leads add constraint leads_status_check
@@ -273,6 +315,11 @@ create index if not exists leads_followup_idx  on public.leads (proximo_contato)
   where status not in ('fechado', 'perdido');
 create unique index if not exists leads_canal_idx on public.leads (origem, canal_id)
   where canal_id is not null;
+create unique index if not exists leads_leadgen_id_unico on public.leads (leadgen_id)
+  where leadgen_id is not null;
+create index if not exists leads_meta_atribuicao_idx
+  on public.leads (meta_campaign_id, meta_adset_id, meta_ad_id, criado_em desc)
+  where origem = 'meta_ads';
 
 
 -- ============================================================================
@@ -313,7 +360,7 @@ create table if not exists public.lead_interacoes (
   autor        text not null default 'sistema'
                check (autor in ('lead', 'corretor', 'ia', 'sistema')),
   canal        text not null default 'painel'
-               check (canal in ('site', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal', 'painel', 'sistema')),
+               check (canal in ('site', 'meta_ads', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal', 'painel', 'sistema')),
   conteudo     text not null,
   automatico   boolean not null default false,
   external_id  text,
@@ -322,6 +369,10 @@ create table if not exists public.lead_interacoes (
   metadados    jsonb not null default '{}'::jsonb,
   criado_em    timestamptz not null default now()
 );
+
+alter table public.lead_interacoes drop constraint if exists lead_interacoes_canal_check;
+alter table public.lead_interacoes add constraint lead_interacoes_canal_check
+  check (canal in ('site', 'meta_ads', 'whatsapp', 'instagram', 'telefone', 'indicacao', 'portal', 'painel', 'sistema'));
 
 create index if not exists lead_interacoes_timeline_idx
   on public.lead_interacoes (lead_id, criado_em);
@@ -334,7 +385,35 @@ create unique index if not exists lead_interacoes_externa_idx
 
 
 -- ============================================================================
--- 5.2 CONFIGURACAO DA IA
+-- 5.2 FILA DURAVEL DOS WEBHOOKS DA META
+-- ----------------------------------------------------------------------------
+-- A Meta pode repetir uma entrega. Esta tabela distingue retry de lead novo e
+-- guarda falhas para reprocessar sem depender do log efemero do servidor.
+-- ============================================================================
+
+create table if not exists public.meta_webhook_eventos (
+  id             uuid primary key default gen_random_uuid(),
+  leadgen_id     text not null unique,
+  page_id        text,
+  form_id        text,
+  payload        jsonb not null default '{}'::jsonb,
+  status         text not null default 'pendente'
+                 check (status in ('pendente', 'processado', 'erro', 'ignorado')),
+  tentativas     integer not null default 1 check (tentativas > 0),
+  ultimo_erro    text,
+  lead_id        uuid references public.leads (id) on delete set null,
+  recebido_em    timestamptz not null default now(),
+  processado_em  timestamptz,
+  atualizado_em  timestamptz not null default now()
+);
+
+create index if not exists meta_webhook_eventos_falhas_idx
+  on public.meta_webhook_eventos (status, atualizado_em)
+  where status in ('pendente', 'erro');
+
+
+-- ============================================================================
+-- 5.3 CONFIGURACAO DA IA
 -- ----------------------------------------------------------------------------
 -- A chave do modelo nunca entra aqui. Ela continua apenas no servidor. Esta
 -- tabela guarda controles operacionais que o corretor pode mudar no painel.
@@ -382,6 +461,10 @@ drop trigger if exists configuracoes_ia_touch on public.configuracoes_ia;
 create trigger configuracoes_ia_touch before update on public.configuracoes_ia
   for each row execute function public.touch_atualizado_em();
 
+drop trigger if exists meta_webhook_eventos_touch on public.meta_webhook_eventos;
+create trigger meta_webhook_eventos_touch before update on public.meta_webhook_eventos
+  for each row execute function public.touch_atualizado_em();
+
 
 -- ============================================================================
 -- 7. RLS — a única coisa que separa o site do seu pai de um site vandalizado
@@ -403,6 +486,7 @@ alter table public.leads      enable row level security;
 alter table public.visitas    enable row level security;
 alter table public.lead_interacoes enable row level security;
 alter table public.configuracoes_ia enable row level security;
+alter table public.meta_webhook_eventos enable row level security;
 
 -- Helper. É SECURITY DEFINER de propósito: ele lê a tabela corretores
 -- ignorando o RLS dela. Sem isso, a policy de corretores chamaria uma função
@@ -535,10 +619,20 @@ create policy "equipe gerencia configuracao ia"
   using (public.e_equipe())
   with check (public.e_equipe());
 
+-- A equipe enxerga falhas para diagnostico; somente o backend com service role
+-- recebe, reprocessa e altera os eventos da Meta.
+drop policy if exists "equipe ve eventos meta" on public.meta_webhook_eventos;
+create policy "equipe ve eventos meta"
+  on public.meta_webhook_eventos for select
+  to authenticated
+  using (public.e_equipe());
+
 grant select, insert, update, delete on public.lead_interacoes to authenticated;
 grant select, insert, update, delete on public.configuracoes_ia to authenticated;
+grant select on public.meta_webhook_eventos to authenticated;
 grant all on public.lead_interacoes to service_role;
 grant all on public.configuracoes_ia to service_role;
+grant all on public.meta_webhook_eventos to service_role;
 
 
 -- ============================================================================

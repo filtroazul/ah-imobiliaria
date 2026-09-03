@@ -61,5 +61,21 @@ Resposta automática vale para conversas que chegam pelo endpoint do ManyChat.
 Um lead criado apenas pelo formulário do site não abre sozinho uma conversa no
 WhatsApp: nesse caso o painel sugere o texto e abre o contato para o corretor.
 
+### Formulários de anúncio da Meta
+
+A integração própria de Meta Lead Ads está implementada no backend e no painel,
+mas ainda não foi ativada em produção. Ela recebe o `leadgen_id` por webhook,
+confere a assinatura da Meta, consulta os dados completos pela Graph API e salva
+o lead com campanha, conjunto, anúncio e formulário de origem. Entregas repetidas
+não duplicam leads; falhas ficam registradas para diagnóstico e nova tentativa.
+
+Telefone preenchido não é tratado como autorização para WhatsApp. O painel guarda
+`sim`, `não` ou `não informado` conforme a resposta explícita do formulário, e
+novos leads da Meta entram com a IA pausada para o primeiro atendimento humano.
+
+Para ativar, rode `supabase/migrations/20260903_meta_lead_ads.sql` e siga
+`deploy/meta-lead-ads.md`. São necessários um app Meta, acesso à Página e seus
+tokens próprios; nenhum segredo deve ir para este repositório.
+
 `RETOMAR.md` tem o resto: arquitetura, o passo a passo da publicação, o que já
 foi testado, o que não foi, e as armadilhas técnicas que já custaram tempo.
