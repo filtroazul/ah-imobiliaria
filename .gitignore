@@ -1,0 +1,16 @@
+# Este repositório é PÚBLICO: ele é servido pelo GitHub Pages e pela Vercel.
+# Qualquer arquivo aqui vira uma URL aberta, inclusive .md e .py.
+
+# Auditoria do FazzLeads. Tem número de contato, contagem do funil, conversas
+# não lidas e leitura do fornecedor do Alejandro. É dado de negócio de um
+# cliente real, não documentação de código.
+MEMORIA-FAZZLEADS.md
+
+# Automação que loga no CRM do fornecedor. Publicar roteiro de login de conta
+# de terceiro não ajuda ninguém e chama problema.
+tools/
+
+# SO
+Thumbs.db
+desktop.ini
+.DS_Store
