@@ -24,14 +24,48 @@ Arquivos principais: `core/meta_leads.py`, `webhook_manychat.py`,
 `supabase/migrations/20260903_meta_lead_ads.sql` e
 `deploy/meta-lead-ads.md`. Os testes automatizados ficam em `tests/` na raiz.
 
-**Ainda não foi publicado nem ligado à conta Meta.** A próxima sessão deve:
-
-1. aplicar a migration no Supabase;
-2. configurar os segredos na VM, conforme `deploy/meta-lead-ads.md`;
-3. criar/configurar o app no Meta for Developers e assinar a Página;
-4. enviar um lead de teste e confirmar entrada no painel.
-
 Não gravar tokens, senha ou códigos de verificação em arquivo.
+
+### Estado real em 03/set, ao fim do dia
+
+| Passo | |
+|---|---|
+| 1. Migration no Supabase | ✅ aplicada e conferida |
+| 2. Código na VM + `META_VERIFY_TOKEN` | ✅ no ar |
+| 3. App no Meta for Developers | ❌ travou na re-digitação da senha do Facebook |
+| 4. Lead de teste | ❌ depende do 3 |
+
+Conferido contra o banco de verdade: 16 colunas novas em `leads`,
+`meta_webhook_eventos` existindo, `relrowsecurity = true`, 1 policy, o índice
+`leads_leadgen_id_unico` e o trigger de `atualizado_em`. **O RLS foi conferido
+no `pg_class`, não pela resposta da API** — tabela nova responde `[]` pra
+qualquer coisa, então `[]` não prova nada. Foi assim que `public.videos` ficou
+aberta em agosto.
+
+Na VM, o health passou a responder `{"crm":true,"meta_leads":false,"ok":true}`.
+O `meta_leads:false` é o esperado nesta fase: `configurado()` só vira `true`
+com App Secret e token da Página, que ainda não existem. O handshake já está
+de pé e foi testado dos dois lados — token certo devolve o `hub.challenge`,
+token errado devolve 403. **Isso basta pra cadastrar a Callback URL na Meta**,
+que é justamente o passo em que a sessão anterior travou por tentar criar o
+app antes de o endpoint existir.
+
+⚠️ **A ordem importa e não é óbvia.** O painel da Meta valida a Callback URL na
+hora em que você salva. Criar o app primeiro não adianta: sem o passo 2 o
+endpoint responde 404 e a Meta recusa. Passos 1 e 2 antes do 3, sempre.
+
+### Por que os scripts de operação não estão no Git
+
+`deploy/subir-meta-lead-ads.ps1` (sobe o código e liga o handshake) e
+`deploy/ligar-meta-app.ps1` (pergunta App Secret e token da Página e grava
+direto no `/etc/leadiot-webhook.env`) ficam **fora dos dois repositórios**:
+carregam o IP da VM e o verify token, e o IP nunca esteve num repo público.
+Eles moram só no PC. O passo a passo sem valor nenhum dentro está em
+`deploy/meta-lead-ads.md`, na raiz do projeto.
+
+O mesmo vale pra `MEMORIA-FAZZLEADS.md` e `tools/`, agora no `.gitignore`
+desta pasta: **este repo é servido pelo GitHub Pages e pela Vercel**, então
+todo arquivo aqui vira URL aberta, `.md` e `.py` inclusive.
 
 ---
 
