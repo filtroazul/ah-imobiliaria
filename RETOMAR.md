@@ -6,7 +6,7 @@
 
 ---
 
-## 03/SET - Meta Lead Ads pronto no código; ativação externa pendente
+## 04/SET - Meta Lead Ads ligado e validado ponta a ponta
 
 Foi criada a integração própria para os formulários instantâneos dos anúncios:
 
@@ -26,14 +26,18 @@ Arquivos principais: `core/meta_leads.py`, `webhook_manychat.py`,
 
 Não gravar tokens, senha ou códigos de verificação em arquivo.
 
-### Estado real em 03/set, ao fim do dia
+### Estado real em 04/set
 
 | Passo | |
 |---|---|
 | 1. Migration no Supabase | ✅ aplicada e conferida |
 | 2. Código na VM + `META_VERIFY_TOKEN` | ✅ no ar |
-| 3. App no Meta for Developers | ❌ travou na re-digitação da senha do Facebook |
-| 4. Lead de teste | ❌ depende do 3 |
+| 3. App + callback + objeto Page/`leadgen` | ✅ criado, validado e assinado |
+| 4. App Secret + token da Página na VM | ✅ gravados direto no env protegido |
+| 5. Permissões e assinatura da Página | ✅ conferidas pela Graph API |
+| 6. Lead de teste no CRM | ✅ processado uma vez, sem duplicação |
+| 7. Teste oficial do webhook no painel Meta | ✅ POST recebido com HTTP 200 |
+| 8. Entrega de leads reais | ⏳ depende de publicar/revisar o app |
 
 Conferido contra o banco de verdade: 16 colunas novas em `leads`,
 `meta_webhook_eventos` existindo, `relrowsecurity = true`, 1 policy, o índice
@@ -42,23 +46,53 @@ no `pg_class`, não pela resposta da API** — tabela nova responde `[]` pra
 qualquer coisa, então `[]` não prova nada. Foi assim que `public.videos` ficou
 aberta em agosto.
 
-Na VM, o health passou a responder `{"crm":true,"meta_leads":false,"ok":true}`.
-O `meta_leads:false` é o esperado nesta fase: `configurado()` só vira `true`
-com App Secret e token da Página, que ainda não existem. O handshake já está
-de pé e foi testado dos dois lados — token certo devolve o `hub.challenge`,
-token errado devolve 403. **Isso basta pra cadastrar a Callback URL na Meta**,
-que é justamente o passo em que a sessão anterior travou por tentar criar o
-app antes de o endpoint existir.
+Na VM, o health responde `{"crm":true,"meta_leads":true,"ok":true}`. App Secret
+e token da Página foram tratados apenas em memória e gravados diretamente em
+`/etc/leadiot-webhook.env`, com backups e modo 600. O token tem
+`leads_retrieval`, `pages_show_list`, `pages_read_engagement`,
+`pages_manage_metadata` e `business_management`, limitado à Página AH Imóveis
+e ao portfólio AH Hernandez.
+
+Conferido pela Graph API: o app está na lista de `subscribed_apps` da Página,
+com `leadgen`; a assinatura de objeto Page do app também tem `leadgen` ativo e
+aponta para a Callback URL correta. O health está verde e o FazzLeads,
+WhatsApp e campanhas não foram alterados.
 
 ⚠️ **A ordem importa e não é óbvia.** O painel da Meta valida a Callback URL na
 hora em que você salva. Criar o app primeiro não adianta: sem o passo 2 o
 endpoint responde 404 e a Meta recusa. Passos 1 e 2 antes do 3, sempre.
 
-### O passo 3 não deve custar a senha do Alejandro
+### Testes concluídos e pendência externa
 
-Duas sessões seguidas travaram no mesmo lugar: a senha do Facebook dele, com
-código de verificação chegando no e-mail/celular **dele**. Isso não escala —
-vai se repetir a cada token que vencer.
+A ferramenta oficial criou um lead sintético no formulário de qualificação.
+O app antigo LeadConnector/FazzLeads marcou `Success`; o app próprio primeiro
+acusou falta de permissão. Depois de adicionar `pages_manage_metadata` e emitir
+um token novo, passou a ficar em `Pending`, mas o histórico do ngrok confirmou
+que a Meta ainda não tentou nenhum POST para `/meta/lead-ads`.
+
+O motivo foi confirmado no próprio painel de Webhooks: enquanto o app estiver
+**Não publicado**, a Meta envia somente os webhooks de teste disparados pelo
+painel e não fornece dados de produção, nem mesmo de administradores,
+desenvolvedores ou testadores. Por isso o `Pending` da ferramenta de Lead Ads
+não indica falha no nosso endpoint.
+
+Para separar problema da Meta de problema nosso, o payload exato desse lead de
+teste foi reenviado com uma assinatura HMAC real, calculada com o App Secret da
+VM. Resultado: HTTP 200, consulta do lead na Graph API, um evento `processado`
+sem erro e exatamente um lead `meta_ads` no Supabase. O mesmo payload foi
+repetido e continuou existindo uma única linha, provando a idempotência por
+`leadgen_id`.
+
+Também foi disparado o teste oficial em **Webhooks → Page → leadgen → Teste**
+por uma sessão limpa, sem o bloqueio de extensões do Brave. A Meta fez um POST
+real para `/meta/lead-ads` e recebeu HTTP 200. O evento ficou `ignorado`, como
+esperado, porque o payload oficial usa uma Page fictícia e o backend filtra
+pela Page AH Imóveis. Esse resultado comprova a entrega Meta → ngrok → backend.
+
+Próximo passo externo: publicar/revisar o app antes de depender de leads reais.
+O painel mostra o caso de uso como `Teste em andamento` e ainda exige chamadas
+de teste da Marketing API e das permissões de anúncios. Não trocar o endpoint
+nem recriar token: credenciais, permissões, assinaturas e backend já passaram.
 
 O caminho certo é pedir uma vez só, no `business.facebook.com` →
 **Configurações do negócio → Pessoas → Adicionar**:
@@ -69,12 +103,10 @@ O caminho certo é pedir uma vez só, no `business.facebook.com` →
 Depois disso o app nasce no login do Iagho, e ele assina a Página em `leadgen`
 com o próprio acesso. A senha do Alejandro sai do caminho de vez.
 
-⚠️ **A sessão do Facebook não sobrevive entre sessões de trabalho.** O login
-que ele fez em 03/set foi num perfil temporário de navegador, que o próprio
-assistente apagou no fim. Antes de pedir pra alguém logar de novo, **conferir
-em qual perfil a sessão existe** — o Brave principal (`User Data\Default`)
-guarda cookie ao fechar (`browser.clear_data_on_exit.cookies = false`), então
-login feito lá dura. Login feito em perfil descartável, não.
+⚠️ A sessão atual está no Brave principal (`User Data\Default`), com depuração
+local em `127.0.0.1:9222`. Ao automatizar, selecionar somente a aba cujo URL
+contém o ID deste app; há outras abas pessoais abertas e elas não fazem parte
+da tarefa.
 
 ### Por que os scripts de operação não estão no Git
 
