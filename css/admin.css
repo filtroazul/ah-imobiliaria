@@ -508,6 +508,7 @@
   color: var(--tinta-fraca);
   font-size: 0.72rem;
 }
+.crm-ia__acoes { display: flex; flex-wrap: wrap; justify-content: end; gap: 0.5rem; }
 
 .crm-funil-topo { align-items: end; margin-top: 0.4rem; }
 .crm-funil-topo > span {
@@ -1026,6 +1027,141 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
 .modal-curto__casca { display: grid; gap: 1rem; padding: 1.25rem; }
 .modal-curto__acoes { display: flex; justify-content: end; gap: 0.6rem; }
 
+/* Teste autenticado do agente. A conversa só vive no navegador e a API dessa
+   tela não escreve no CRM nem conhece o número do WhatsApp. */
+.chat-teste-dialog {
+  width: min(94vw, 48rem);
+  height: min(90dvh, 46rem);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--dourado-fio);
+  border-radius: var(--r-card);
+  color: var(--tinta);
+  background: var(--bg);
+  box-shadow: var(--sombra-alta);
+  overflow: hidden;
+}
+.chat-teste__casca {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto minmax(12rem, 1fr) auto auto;
+}
+.chat-teste__topo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--linha);
+  background: var(--bg-alto);
+}
+.chat-teste__avatar {
+  width: 2.5rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--dourado-fio);
+  border-radius: 50%;
+  color: var(--dourado-texto);
+  font-family: var(--fonte-display);
+  font-weight: 700;
+}
+.chat-teste__topo h2 { font-size: 1.05rem; }
+.chat-teste__topo p { margin-top: 0.12rem; color: var(--tinta-fraca); font-size: 0.75rem; }
+.chat-teste__seguranca {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--linha);
+  color: var(--tinta-media);
+  background: var(--vermelho-fraco);
+  font-size: 0.76rem;
+}
+.chat-teste__seguranca .ph { flex: 0 0 auto; color: var(--dourado-texto); font-size: 1.1rem; }
+.chat-teste__historico {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem;
+  background: var(--bg-fundo);
+  overflow-y: auto;
+}
+.chat-teste__vazio {
+  max-width: 25rem;
+  margin: auto;
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+  color: var(--tinta-fraca);
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.chat-teste__vazio .ph { color: var(--dourado-texto); font-size: 2rem; }
+.chat-teste__balao {
+  width: fit-content;
+  max-width: min(82%, 32rem);
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--linha);
+  border-radius: 0.2rem var(--r-campo) var(--r-campo) var(--r-campo);
+  background: var(--bg-alto);
+  font-size: 0.84rem;
+}
+.chat-teste__balao--cliente {
+  align-self: end;
+  border-color: var(--dourado-fio);
+  border-radius: var(--r-campo) 0.2rem var(--r-campo) var(--r-campo);
+  background: var(--vermelho-fraco);
+}
+.chat-teste__balao strong {
+  color: var(--tinta-fraca);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+.chat-teste__balao p { line-height: 1.45; overflow-wrap: anywhere; }
+.chat-teste__digitando {
+  width: fit-content;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-campo);
+  background: var(--bg-alto);
+}
+.chat-teste__digitando i {
+  width: 0.35rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--tinta-fraca);
+}
+.chat-teste__compositor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--linha);
+  background: var(--bg-alto);
+}
+.chat-teste__compositor textarea { min-height: 3rem; max-height: 8rem; resize: vertical; }
+.chat-teste__compositor .btn { min-height: 3rem; }
+.chat-teste__rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-fraca);
+  background: var(--bg);
+  font-size: 0.7rem;
+}
+
 @media (max-width: 1180px) {
   .crm-kpis { grid-template-columns: repeat(3, 1fr); }
   .crm-kpi:nth-child(3) { border-right: 0; }
@@ -1466,6 +1602,9 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   .crm-kpi__marca { font-size: 2.6rem; }
   .crm-resumo { grid-template-columns: 1fr; }
   .crm-ia { grid-column: auto; }
+  .crm-ia__rodape { align-items: stretch; flex-direction: column; }
+  .crm-ia__acoes { justify-content: stretch; }
+  .crm-ia__acoes .btn-mini { flex: 1 1 auto; }
   .crm-grafico { grid-template-rows: 10rem auto; }
   /* Numa tela de 390px cabem 10 datas só se rodarem de lado. Deixo em pé a
      primeira e a última, que dão o intervalo, e escondo o resto: o eixo aqui
@@ -1488,6 +1627,13 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   .lead-compositor__acoes .btn,
   .lead-compositor__acoes .btn-mini { flex: 1 1 auto; }
   .lead-compositor__acoes .btn:last-child { width: 100%; margin-left: 0; }
+  .chat-teste-dialog { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+  .chat-teste__seguranca { align-items: flex-start; }
+  .chat-teste__balao { max-width: 90%; }
+  .chat-teste__compositor { grid-template-columns: minmax(0, 1fr); }
+  .chat-teste__compositor .btn { width: 100%; }
+  .chat-teste__rodape { align-items: stretch; flex-direction: column; }
+  .chat-teste__rodape .btn-mini { width: 100%; }
 }
 
 /* ==========================================================================
@@ -1526,6 +1672,11 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
     to   { transform: none; }
   }
 
+  @keyframes crm-pulsa {
+    from { opacity: 0.35; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(-0.16rem); }
+  }
+
   /* --i é o índice, escrito pelo js/crm.js em cada item. O atraso em cascata
      é o que faz a fileira "assentar" da esquerda pra direita em vez de as seis
      células piscarem juntas. Teto de 6 pra a última não demorar. */
@@ -1561,4 +1712,8 @@ dialog::backdrop { background: rgba(28, 21, 16, 0.58); backdrop-filter: blur(3px
   .crm-grafico__balao { animation: crm-sobe 0.16s var(--ease); }
   .lead-dialog[open] { animation: crm-sobe 0.28s var(--ease); }
   .modal-curto[open] { animation: crm-sobe 0.22s var(--ease); }
+  .chat-teste-dialog[open] { animation: crm-sobe 0.24s var(--ease); }
+  .chat-teste__digitando i { animation: crm-pulsa 0.9s ease-in-out infinite alternate; }
+  .chat-teste__digitando i:nth-child(2) { animation-delay: 0.15s; }
+  .chat-teste__digitando i:nth-child(3) { animation-delay: 0.3s; }
 }

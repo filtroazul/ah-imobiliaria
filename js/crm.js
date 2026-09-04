@@ -47,6 +47,8 @@ let snapshot = {
 let leadAbertoId = null;
 let iniciado = false;
 let carregando = false;
+let historicoTeste = [];
+let testeEmAndamento = false;
 
 function textoSimples(valor) {
   return String(valor ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -1038,6 +1040,75 @@ async function sugerirResposta() {
   }
 }
 
+function renderizarChatTeste() {
+  const alvo = $('#chat-teste-historico');
+  if (!historicoTeste.length) {
+    alvo.innerHTML = `
+      <div class="chat-teste__vazio">
+        <i class="ph ph-chats-circle" aria-hidden="true"></i>
+        <p>Você faz o papel do cliente. Escreva uma pergunta real e veja como a IA responderia no WhatsApp.</p>
+      </div>`;
+    return;
+  }
+  alvo.innerHTML = historicoTeste.map((item) => `
+    <article class="chat-teste__balao chat-teste__balao--${item.role === 'user' ? 'cliente' : 'ia'}">
+      <strong>${item.role === 'user' ? 'Cliente teste' : 'IA da imobiliária'}</strong>
+      <p>${escapar(item.content).replaceAll('\n', '<br>')}</p>
+    </article>`).join('') + (testeEmAndamento ? `
+      <div class="chat-teste__digitando" aria-label="A IA está digitando">
+        <i></i><i></i><i></i>
+      </div>` : '');
+  alvo.scrollTop = alvo.scrollHeight;
+}
+
+function abrirChatTeste() {
+  renderizarChatTeste();
+  const dialog = $('#chat-teste-dialog');
+  if (!dialog.open) dialog.showModal();
+  setTimeout(() => $('#chat-teste-mensagem').focus(), 80);
+}
+
+function fecharChatTeste() {
+  if ($('#chat-teste-dialog').open) $('#chat-teste-dialog').close();
+}
+
+function limparChatTeste() {
+  historicoTeste = [];
+  testeEmAndamento = false;
+  $('#chat-teste-mensagem').value = '';
+  renderizarChatTeste();
+  $('#chat-teste-mensagem').focus();
+}
+
+async function enviarChatTeste(evento) {
+  evento.preventDefault();
+  if (testeEmAndamento) return;
+  const campo = $('#chat-teste-mensagem');
+  const mensagem = campo.value.trim();
+  if (!mensagem) return;
+
+  const contextoAnterior = historicoTeste.map((item) => ({ ...item }));
+  historicoTeste.push({ role: 'user', content: mensagem });
+  campo.value = '';
+  testeEmAndamento = true;
+  $('#chat-teste-enviar').disabled = true;
+  renderizarChatTeste();
+
+  try {
+    const resposta = await repo.testarChat(mensagem, contextoAnterior);
+    historicoTeste.push({ role: 'assistant', content: resposta });
+  } catch (erro) {
+    historicoTeste.pop();
+    campo.value = mensagem;
+    mostrarRecado(`Teste do chatbot: ${erro.message}`, 'erro');
+  } finally {
+    testeEmAndamento = false;
+    $('#chat-teste-enviar').disabled = false;
+    renderizarChatTeste();
+    campo.focus();
+  }
+}
+
 async function copiarResposta() {
   const texto = $('#lead-resposta').value.trim();
   if (!texto) return;
@@ -1141,7 +1212,15 @@ function ligarEventos() {
   $('#crm-atualizar').addEventListener('click', () => carregarCRM());
   $('#crm-exportar').addEventListener('click', exportarCSV);
   $('#crm-ia-salvar').addEventListener('click', salvarModoIA);
+  $('#crm-ia-testar').addEventListener('click', abrirChatTeste);
   $('#crm-novo-lead').addEventListener('click', abrirNovoLead);
+
+  $('#chat-teste-form').addEventListener('submit', enviarChatTeste);
+  $('#chat-teste-fechar').addEventListener('click', fecharChatTeste);
+  $('#chat-teste-limpar').addEventListener('click', limparChatTeste);
+  $('#chat-teste-dialog').addEventListener('click', (evento) => {
+    if (evento.target === $('#chat-teste-dialog')) fecharChatTeste();
+  });
 
   $('#crm-funil').addEventListener('click', (evento) => {
     // O atalho do WhatsApp mora dentro do card. Sem esta saída, clicar nele
@@ -1193,4 +1272,5 @@ export function iniciarCRM() {
 export function fecharCRM() {
   if ($('#lead-detalhe').open) fecharLead();
   if ($('#novo-lead-dialog').open) $('#novo-lead-dialog').close();
+  if ($('#chat-teste-dialog').open) fecharChatTeste();
 }

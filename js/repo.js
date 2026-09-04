@@ -426,6 +426,29 @@ export async function sugerirResposta(leadId, instrucao = '') {
   return corpo.sugestao;
 }
 
+/** Testa o mesmo agente do WhatsApp sem criar lead, gravar histórico ou enviar. */
+export async function testarChat(mensagem, historico = []) {
+  if (!naNuvem) {
+    throw new Error('O teste do chatbot só fica disponível no painel conectado à nuvem.');
+  }
+  const url = String(CONFIG.automacao?.backendUrl ?? '').replace(/\/$/, '');
+  if (!url) throw new Error('O endereço do backend da IA ainda não foi configurado.');
+
+  const sb = await cliente();
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sua sessão expirou. Entre no painel novamente.');
+
+  const resposta = await fetch(`${url}/crm/testar-chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ mensagem, historico }),
+  });
+  const corpo = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) throw new Error(corpo.error ?? 'A IA não conseguiu responder ao teste.');
+  return corpo.resposta;
+}
+
 /* ============================================================ utilidades == */
 
 function extensaoDe(mime) {

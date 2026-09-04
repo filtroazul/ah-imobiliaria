@@ -199,7 +199,12 @@
           <p class="crm-ia__explica" id="crm-ia-explica"></p>
           <div class="crm-ia__rodape">
             <span id="crm-ia-agente">Agente: ah_imobiliaria</span>
-            <button class="btn-mini" type="button" id="crm-ia-salvar">Salvar modo</button>
+            <div class="crm-ia__acoes">
+              <button class="btn-mini" type="button" id="crm-ia-testar">
+                <i class="ph ph-chat-circle-dots" aria-hidden="true"></i>Testar chatbot
+              </button>
+              <button class="btn-mini" type="button" id="crm-ia-salvar">Salvar modo</button>
+            </div>
           </div>
         </section>
       </div>
@@ -698,6 +703,46 @@
         </section>
       </div>
       <div class="recado" id="lead-recado" aria-live="polite" hidden></div>
+    </div>
+  </dialog>
+
+  <!-- O teste usa o agente real, mas nunca grava lead nem envia ao WhatsApp. -->
+  <dialog class="chat-teste-dialog" id="chat-teste-dialog" aria-labelledby="chat-teste-titulo">
+    <div class="chat-teste__casca">
+      <header class="chat-teste__topo">
+        <div class="chat-teste__avatar" aria-hidden="true">AH</div>
+        <div>
+          <h2 id="chat-teste-titulo">Teste do chatbot</h2>
+          <p>Simulação do atendimento no WhatsApp</p>
+        </div>
+        <button class="btn-icone" type="button" id="chat-teste-fechar" aria-label="Fechar teste">
+          <i class="ph ph-x" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="chat-teste__seguranca" role="status">
+        <i class="ph ph-shield-check" aria-hidden="true"></i>
+        <span><strong>Ambiente isolado.</strong> Nada daqui é enviado ao WhatsApp, ao FazzLeads ou salvo no CRM.</span>
+      </div>
+
+      <div class="chat-teste__historico" id="chat-teste-historico" role="log"
+           aria-live="polite" aria-label="Conversa de teste"></div>
+
+      <form class="chat-teste__compositor" id="chat-teste-form">
+        <label class="sr-only" for="chat-teste-mensagem">Mensagem do cliente de teste</label>
+        <textarea id="chat-teste-mensagem" rows="2" maxlength="2000"
+                  placeholder="Ex: Oi, procuro um apartamento no Eusébio até R$ 500 mil" required></textarea>
+        <button class="btn" type="submit" id="chat-teste-enviar">
+          <span>Enviar</span><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>
+        </button>
+      </form>
+
+      <footer class="chat-teste__rodape">
+        <button class="btn-mini" type="button" id="chat-teste-limpar">
+          <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Nova conversa
+        </button>
+        <span>Recarregar a página também apaga este teste.</span>
+      </footer>
     </div>
   </dialog>
 

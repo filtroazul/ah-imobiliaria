@@ -58,6 +58,23 @@ com `leadgen`; a assinatura de objeto Page do app também tem `leadgen` ativo e
 aponta para a Callback URL correta. O health está verde e o FazzLeads,
 WhatsApp e campanhas não foram alterados.
 
+### Chatbot testável sem encostar no WhatsApp
+
+O card **Atendimento com IA** do painel ganhou o botão **Testar chatbot**. Ele
+abre uma conversa que usa o agente real `ah_imobiliaria` e o catálogo, mas é
+isolada por projeto:
+
+- exige login válido de um corretor ativo;
+- mantém o histórico somente na memória daquela aba;
+- não cria lead nem grava em `lead_interacoes`;
+- não chama WhatsApp, ManyChat ou FazzLeads;
+- remove o resumo interno mesmo se o modelo esquecer os separadores.
+
+A rota é `POST /crm/testar-chat`. Ela serve para aprovar tom, perguntas e
+qualificação antes de conectar um número. O atendimento automático no número
+real ainda depende da conexão oficial com a WhatsApp Business Platform; até
+essa migração, o FazzLeads continua responsável pelo WhatsApp atual.
+
 ⚠️ **A ordem importa e não é óbvia.** O painel da Meta valida a Callback URL na
 hora em que você salva. Criar o app primeiro não adianta: sem o passo 2 o
 endpoint responde 404 e a Meta recusa. Passos 1 e 2 antes do 3, sempre.
