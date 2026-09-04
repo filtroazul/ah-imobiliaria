@@ -70,6 +70,11 @@ isolada por projeto:
 - não chama WhatsApp, ManyChat ou FazzLeads;
 - remove o resumo interno mesmo se o modelo esquecer os separadores.
 
+No primeiro teste real, o modelo antigo `llama-3.3-70b-versatile` respondeu
+404: a Groq o retirou do plano free/developer em 16/08/2026. O agente
+`ah_imobiliaria` foi migrado para `openai/gpt-oss-120b`, com reservas apenas
+em modelos ativos. Teste direto na VM concluído com resposta válida.
+
 A rota é `POST /crm/testar-chat`. Ela serve para aprovar tom, perguntas e
 qualificação antes de conectar um número. O atendimento automático no número
 real ainda depende da conexão oficial com a WhatsApp Business Platform; até
