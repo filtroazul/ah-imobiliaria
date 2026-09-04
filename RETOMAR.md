@@ -54,6 +54,28 @@ app antes de o endpoint existir.
 hora em que você salva. Criar o app primeiro não adianta: sem o passo 2 o
 endpoint responde 404 e a Meta recusa. Passos 1 e 2 antes do 3, sempre.
 
+### O passo 3 não deve custar a senha do Alejandro
+
+Duas sessões seguidas travaram no mesmo lugar: a senha do Facebook dele, com
+código de verificação chegando no e-mail/celular **dele**. Isso não escala —
+vai se repetir a cada token que vencer.
+
+O caminho certo é pedir uma vez só, no `business.facebook.com` →
+**Configurações do negócio → Pessoas → Adicionar**:
+
+- a conta pessoal do Iagho vira **administradora** do portfólio AH Hernandez;
+- com acesso à Página e à conta de anúncios.
+
+Depois disso o app nasce no login do Iagho, e ele assina a Página em `leadgen`
+com o próprio acesso. A senha do Alejandro sai do caminho de vez.
+
+⚠️ **A sessão do Facebook não sobrevive entre sessões de trabalho.** O login
+que ele fez em 03/set foi num perfil temporário de navegador, que o próprio
+assistente apagou no fim. Antes de pedir pra alguém logar de novo, **conferir
+em qual perfil a sessão existe** — o Brave principal (`User Data\Default`)
+guarda cookie ao fechar (`browser.clear_data_on_exit.cookies = false`), então
+login feito lá dura. Login feito em perfil descartável, não.
+
 ### Por que os scripts de operação não estão no Git
 
 `deploy/subir-meta-lead-ads.ps1` (sobe o código e liga o handshake) e
