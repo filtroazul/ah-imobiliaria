@@ -37,7 +37,7 @@ Não gravar tokens, senha ou códigos de verificação em arquivo.
 | 5. Permissões e assinatura da Página | ✅ conferidas pela Graph API |
 | 6. Lead de teste no CRM | ✅ processado uma vez, sem duplicação |
 | 7. Teste oficial do webhook no painel Meta | ✅ POST recebido com HTTP 200 |
-| 8. Entrega de leads reais | ⏳ depende de publicar/revisar o app |
+| 8. Entrega de leads reais | ✅ app publicado e teste oficial processado |
 
 Conferido contra o banco de verdade: 16 colunas novas em `leads`,
 `meta_webhook_eventos` existindo, `relrowsecurity = true`, 1 policy, o índice
@@ -62,19 +62,13 @@ WhatsApp e campanhas não foram alterados.
 hora em que você salva. Criar o app primeiro não adianta: sem o passo 2 o
 endpoint responde 404 e a Meta recusa. Passos 1 e 2 antes do 3, sempre.
 
-### Testes concluídos e pendência externa
+### Testes concluídos e publicação
 
-A ferramenta oficial criou um lead sintético no formulário de qualificação.
-O app antigo LeadConnector/FazzLeads marcou `Success`; o app próprio primeiro
-acusou falta de permissão. Depois de adicionar `pages_manage_metadata` e emitir
-um token novo, passou a ficar em `Pending`, mas o histórico do ngrok confirmou
-que a Meta ainda não tentou nenhum POST para `/meta/lead-ads`.
-
-O motivo foi confirmado no próprio painel de Webhooks: enquanto o app estiver
-**Não publicado**, a Meta envia somente os webhooks de teste disparados pelo
-painel e não fornece dados de produção, nem mesmo de administradores,
-desenvolvedores ou testadores. Por isso o `Pending` da ferramenta de Lead Ads
-não indica falha no nosso endpoint.
+O app **AH Imoveis Leads CRM** foi publicado em 04/set/2026. Antes da
+publicação, a ferramenta oficial mantinha o app em `Pending`, porque apps não
+publicados não recebem dados de produção. Foram cadastradas e publicadas as
+URLs de política de privacidade, termos e exclusão de dados, além do domínio e
+do ícone do app.
 
 Para separar problema da Meta de problema nosso, o payload exato desse lead de
 teste foi reenviado com uma assinatura HMAC real, calculada com o App Secret da
@@ -89,19 +83,14 @@ real para `/meta/lead-ads` e recebeu HTTP 200. O evento ficou `ignorado`, como
 esperado, porque o payload oficial usa uma Page fictícia e o backend filtra
 pela Page AH Imóveis. Esse resultado comprova a entrega Meta → ngrok → backend.
 
-Próximo passo externo: publicar/revisar o app antes de depender de leads reais.
-O painel mostra o caso de uso como `Teste em andamento` e ainda exige chamadas
-de teste da Marketing API e das permissões de anúncios. Não trocar o endpoint
-nem recriar token: credenciais, permissões, assinaturas e backend já passaram.
-
-O caminho certo é pedir uma vez só, no `business.facebook.com` →
-**Configurações do negócio → Pessoas → Adicionar**:
-
-- a conta pessoal do Iagho vira **administradora** do portfólio AH Hernandez;
-- com acesso à Página e à conta de anúncios.
-
-Depois disso o app nasce no login do Iagho, e ele assina a Página em `leadgen`
-com o próprio acesso. A senha do Alejandro sai do caminho de vez.
+Depois da publicação, um lead novo foi gerado pela **Ferramenta de testes de
+anúncios de lead** no formulário real da Página AH Imóveis. A Meta marcou
+`Success` tanto para o app próprio quanto para o LeadConnector/FazzLeads. No
+backend, o evento ficou `processado` na primeira tentativa, sem erro, com
+Página e formulário corretos; no Supabase foi criada exatamente uma linha em
+`leads`, com origem `meta_ads`. Isso valida o caminho completo Meta → webhook →
+Graph API → Supabase → CRM. FazzLeads, WhatsApp e campanhas continuaram
+intactos.
 
 ⚠️ A sessão atual está no Brave principal (`User Data\Default`), com depuração
 local em `127.0.0.1:9222`. Ao automatizar, selecionar somente a aba cujo URL
